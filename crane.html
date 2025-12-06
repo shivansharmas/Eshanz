@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tech Challenge 2026: Raise the Roof (Iso-2D)</title>
+    <title>Tech Challenge 2026: Raise the Roof by ESHANZ</title>
     <style>
         body {
             margin: 0;
@@ -14,7 +14,7 @@
             color: white;
             user-select: none;
             -webkit-user-select: none;
-            touch-action: none; /* Prevent mobile scrolling */
+            touch-action: none;
         }
         #game-container {
             position: relative;
@@ -31,10 +31,11 @@
         }
         #ui-layer {
             position: absolute;
-            top: 20px;
+            top: 160px;
             left: 20px;
             pointer-events: none;
             z-index: 5;
+            transition: top 0.3s;
         }
         .hud-panel {
             background: rgba(0, 0, 0, 0.8);
@@ -84,7 +85,6 @@
         #timer { font-size: 32px; font-weight: bold; color: #e74c3c; }
         #score { color: #2ecc71; font-weight: bold; }
         
-        /* Floating Message */
         #message-toast {
             position: absolute;
             bottom: 30%;
@@ -100,21 +100,20 @@
             pointer-events: none;
         }
 
-        /* --- MOBILE CONTROLS --- */
+        /* --- MOBILE CONTROLS (Default: Hidden) --- */
         .mobile-controls {
+            display: none; /* Hidden by default on desktop */
             position: absolute;
-            bottom: 20px;
+            top: 10px;
             width: 100%;
             height: 150px;
-            pointer-events: none; /* Let touches pass to buttons */
-            display: flex;
+            pointer-events: none;
             justify-content: space-between;
             padding: 0 20px;
             box-sizing: border-box;
             z-index: 100;
         }
 
-        /* Left Side: D-Pad */
         .d-pad {
             position: relative;
             width: 150px;
@@ -140,21 +139,22 @@
             touch-action: none;
         }
         .d-btn:active { background: #e67e22; }
+        /* D-Pad Positioning Calculation: Center (75) - HalfBtn (22.5) = 52.5 */
         .d-up { top: 5px; left: 52px; }
         .d-down { bottom: 5px; left: 52px; }
         .d-left { top: 52px; left: 5px; }
         .d-right { top: 52px; right: 5px; }
 
-        /* Right Side: Action Buttons */
         .action-group {
             position: relative;
             width: 180px;
             height: 150px;
             pointer-events: auto;
             display: flex;
-            align-items: flex-end;
+            align-items: flex-start;
             justify-content: flex-end;
             gap: 15px;
+            padding-top: 10px;
         }
         .act-btn {
             width: 65px;
@@ -174,19 +174,44 @@
         }
         .act-btn:active { transform: scale(0.95); opacity: 0.8; }
         
-        .btn-hook { background: #e74c3c; width: 80px; height: 80px; font-size: 16px; margin-bottom: 10px;} /* Big Red Button */
-        .btn-grab { background: #2ecc71; margin-bottom: 25px; } /* Green */
+        .btn-hook { background: #e74c3c; width: 80px; height: 80px; font-size: 16px; margin-top: 10px;}
+        .btn-grab { background: #2ecc71; margin-top: 25px; }
         .btn-view { 
             position: absolute; 
-            top: 0; right: 0; 
+            bottom: 0; right: 0; 
             width: 50px; height: 50px; 
             background: #3498db; 
             font-size: 10px;
         }
 
-        /* Hide controls on desktop if desired, currently showing for all as requested */
-        @media (min-width: 1024px) {
-            /* Optional: .mobile-controls { display: none; } */
+        /* --- MEDIA QUERIES FOR MOBILE/TABLET --- */
+        @media (max-width: 1024px) {
+            /* Shrink HUD Text */
+            #ui-layer { top: 120px; left: 10px; } /* Move up */
+            .hud-panel { padding: 10px; margin-bottom: 5px; }
+            h1 { font-size: 18px; margin-bottom: 5px; }
+            #timer { font-size: 22px; }
+            #score { font-size: 14px; }
+            p { font-size: 12px; margin: 2px 0; }
+            
+            /* Shrink Controls */
+            .mobile-controls { height: 120px; top: 10px; padding: 0 10px; }
+            
+            /* Smaller D-Pad (120px) */
+            .d-pad { width: 120px; height: 120px; }
+            .d-btn { width: 35px; height: 35px; font-size: 18px; border-radius: 6px; }
+            /* New Center: 60px. HalfBtn: 17.5px. Offset: 42.5px */
+            .d-up { top: 5px; left: 42px; }
+            .d-down { bottom: 5px; left: 42px; }
+            .d-left { top: 42px; left: 5px; }
+            .d-right { top: 42px; right: 5px; }
+
+            /* Smaller Action Buttons */
+            .action-group { width: 140px; height: 120px; gap: 10px; }
+            .act-btn { width: 50px; height: 50px; font-size: 11px; border-width: 2px; }
+            .btn-hook { width: 60px; height: 60px; font-size: 13px; margin-top: 5px; }
+            .btn-grab { margin-top: 15px; }
+            .btn-view { width: 40px; height: 40px; bottom: 0; right: 0; font-size: 9px; }
         }
     </style>
 </head>
@@ -197,12 +222,12 @@
     
     <div id="ui-layer">
         <div class="hud-panel">
-            <h1>Raise the Roof</h1>
+            <h1>Raise the Roof by ESHANZ</h1>
             <p>Time: <span id="timer">04:00</span></p>
             <p>Placed: <span id="score">0/3</span></p>
             <p>Grade: <span id="grade-display">--</span></p>
         </div>
-        <div class="hud-panel" style="font-size: 0.8em; opacity: 0.8;">
+        <div class="hud-panel" id="controls-help" style="font-size: 0.8em; opacity: 0.8;">
             <p>⌨️ Keyboard / 📱 Touch</p>
             <p><span class="key">Arrows</span> Move</p>
             <p><span class="key">Space</span> Hook</p>
@@ -213,7 +238,6 @@
     
     <div id="message-toast">Message</div>
 
-    <!-- Mobile Controls Overlay -->
     <div class="mobile-controls">
         <div class="d-pad">
             <div class="d-btn d-up" data-key="ArrowUp">⬆️</div>
@@ -229,7 +253,7 @@
     </div>
 
     <div id="start-screen">
-        <h1 style="font-size: 48px; color: #f1c40f; text-align:center;">RAISE THE ROOF</h1>
+        <h1 style="font-size: 48px; color: #f1c40f; text-align:center;">RAISE THE ROOF by ESHANZ</h1>
         <p style="font-size: 20px; margin-bottom: 30px; color: #bdc3c7;">Select Difficulty Level</p>
         <button class="btn" onclick="startGame(0)">Grades 4-5 (2 Large, 1 Small)</button>
         <button class="btn" onclick="startGame(1)">Grade 6 (1 Large, 2 Small)</button>
@@ -250,25 +274,20 @@
     const ctx = canvas.getContext('2d');
     
     // --- Constants & Config ---
-    
-    // View Settings
     let currentViewScaleY = 0.6; // 0.6 for Iso
     let currentHeightScale = 1.0; 
-    let viewRotationOffset = 0; // New: To rotate the world
-    
-    let viewMode = 0; // 0: Iso, 1: Diagonal, 2: Top
+    let viewRotationOffset = 0; 
+    let viewMode = 0; 
 
     let SCALE = 1;
     let CENTER_X = 0;
     let CENTER_Y = 0;
 
-    // Game Logic
     let gameState = 'MENU';
     let lastTime = 0;
     let timeLeft = 240;
     let placedCount = 0;
     
-    // Crane Physics
     const crane = {
         angle: Math.PI, // Start facing LEFT (Zone 1)
         length: 150,
@@ -276,36 +295,51 @@
         minLength: 50,
         hookHeight: 100, // 0 = floor, 100 = top
         holding: null,
-        poleHeight: 140, // Taller tower to clear the larger hurdle
+        poleHeight: 140, 
         counterJibLength: 80
     };
 
     const modules = [];
     const targets = [];
     
-    // The Hurdle (Wall between Zone 2 and 3 -> 90 degrees)
-    // Updated: Spans from platform (50) to end of zone (350). Height approx 60.
     const hurdle = { angle: Math.PI/2, distStart: 50, distEnd: 350, height: 60 };
 
     const keys = { ArrowLeft:false, ArrowRight:false, ArrowUp:false, ArrowDown:false, Space:false, KeyG:false, KeyV:false };
     let keyGToggle = false;
     let keyVToggle = false;
 
+    // --- Device Detection ---
+    function checkDevice() {
+        const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // Check if screen is mobile/tablet size (<= 1024px)
+        const isSmallScreen = window.innerWidth <= 1024;
+
+        if (isTouch && isSmallScreen) {
+            // Show Mobile Controls
+            document.querySelector('.mobile-controls').style.display = 'flex';
+            // Hide the Keyboard instructions to save space
+            document.getElementById('controls-help').style.display = 'none';
+        } else {
+            document.querySelector('.mobile-controls').style.display = 'none';
+            document.getElementById('controls-help').style.display = 'block';
+        }
+    }
+    window.addEventListener('resize', checkDevice);
+    // Run detection on load
+    checkDevice();
+
     // --- Setup ---
-    
     function initLevel(grade) {
         modules.length = 0;
         targets.length = 0;
         placedCount = 0;
         timeLeft = 240;
         
-        // Reset Crane
-        crane.angle = Math.PI * 0.95; // Start near Zone 1
+        crane.angle = Math.PI * 0.95; 
         crane.length = 150;
         crane.hookHeight = 100;
         crane.holding = null;
 
-        // 1. Create Modules in Zone 1 (Left: 135 deg to 180 deg)
         for(let i=0; i<3; i++) {
             const angleDeg = 145 + (i * 12);
             const angle = angleDeg * (Math.PI/180);
@@ -320,15 +354,10 @@
             });
         }
 
-        // 2. Create Targets
         const configs = [
-            // G 4-5
             [ {t:'L', a:110, d:200}, {t:'L', a:130, d:250}, {t:'S', a:60, d:220} ],
-            // G 6
             [ {t:'L', a:110, d:220}, {t:'S', a:55, d:200}, {t:'S', a:75, d:240} ],
-            // G 7-8
             [ {t:'S', a:60, d:210}, {t:'S', a:80, d:250}, {t:'K', a:20, d:230} ],
-            // G 9-12
             [ {t:'S', a:50, d:220}, {t:'K', a:15, d:200}, {t:'K', a:35, d:240} ]
         ];
 
@@ -358,13 +387,13 @@
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
         CENTER_X = canvas.width / 2;
-        CENTER_Y = canvas.height * 0.75; // Lower down to make room for lifting
+        CENTER_Y = canvas.height * 0.75; 
         SCALE = Math.min(canvas.width, canvas.height) / 800;
+        checkDevice(); // Re-check layout on resize
     }
     window.addEventListener('resize', resize);
     resize();
 
-    // --- Inputs (Keyboard) ---
     window.addEventListener('keydown', e => {
         if(keys.hasOwnProperty(e.code) || e.code === 'Space') keys[e.code] = true;
         if(e.code === 'KeyG' && !keyGToggle) { toggleGrab(); keyGToggle = true; }
@@ -376,58 +405,35 @@
         if(e.code === 'KeyV') keyVToggle = false;
     });
 
-    // --- Inputs (Touch) ---
-    // Prevent default touch actions (scrolling/zooming)
     document.querySelectorAll('.d-btn, .act-btn').forEach(btn => {
         btn.addEventListener('touchstart', (e) => {
             e.preventDefault();
             const key = btn.getAttribute('data-key');
             keys[key] = true;
-            
-            // Trigger single press toggles immediately
             if(key === 'KeyG' && !keyGToggle) { toggleGrab(); keyGToggle = true; }
             if(key === 'KeyV' && !keyVToggle) { toggleView(); keyVToggle = true; }
-            
             btn.style.transform = "scale(0.9)";
             btn.style.backgroundColor = "rgba(255,255,255,0.3)";
         });
-        
         btn.addEventListener('touchend', (e) => {
             e.preventDefault();
             const key = btn.getAttribute('data-key');
             keys[key] = false;
-            
-            // Reset toggles
             if(key === 'KeyG') keyGToggle = false;
             if(key === 'KeyV') keyVToggle = false;
-            
             btn.style.transform = "scale(1)";
-            btn.style.backgroundColor = ""; // Revert to CSS default
+            btn.style.backgroundColor = ""; 
         });
     });
 
-
     function toggleView() {
         viewMode = (viewMode + 1) % 3;
-        
         if (viewMode === 0) {
-            // Isometric (Standard)
-            currentViewScaleY = 0.6;
-            currentHeightScale = 1.0;
-            viewRotationOffset = 0;
-            showMessage("View: Isometric");
+            currentViewScaleY = 0.6; currentHeightScale = 1.0; viewRotationOffset = 0; showMessage("View: Isometric");
         } else if (viewMode === 1) {
-            // Diagonal (Side-ish)
-            currentViewScaleY = 0.6;
-            currentHeightScale = 1.0;
-            viewRotationOffset = -Math.PI / 4; // Rotate 45 degrees
-            showMessage("View: Diagonal");
+            currentViewScaleY = 0.6; currentHeightScale = 1.0; viewRotationOffset = -Math.PI / 4; showMessage("View: Diagonal");
         } else {
-            // Top Down
-            currentViewScaleY = 1.0;
-            currentHeightScale = 0.0;
-            viewRotationOffset = 0;
-            showMessage("View: Top Down");
+            currentViewScaleY = 1.0; currentHeightScale = 0.0; viewRotationOffset = 0; showMessage("View: Top Down");
         }
     }
 
@@ -442,32 +448,33 @@
     function toggleGrab() {
         if (crane.holding !== null) {
             // Drop logic
+            // Check height safety first
+            if (crane.hookHeight > 10) {
+                showMessage("Hook too high to drop!", "bad");
+                return;
+            }
+
             const m = modules[crane.holding];
             m.z = 0;
             crane.holding = null;
             
-            // Calculate exact Cartesian position of module on drop
             const dropX = Math.cos(m.angle) * m.dist;
             const dropY = Math.sin(m.angle) * m.dist;
             
-            // Check placement
             let placed = false;
             targets.forEach(t => {
-                if(t.occupied || m.placed) return; // Skip if target full or module already done
+                if(t.occupied || m.placed) return; 
                 
-                // Dist check using the calculated drop coordinates
                 const dx = dropX - t.x;
                 const dy = dropY - t.y; 
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 
-                let limit = 20; // Tolerance
-                if(t.type === 'K') limit = 12; // Harder
+                let limit = 20; 
+                if(t.type === 'K') limit = 12; 
 
                 if(dist < limit) {
-                    // Success place
                     t.occupied = true;
                     m.placed = true;
-                    // Snap visually
                     m.angle = Math.atan2(t.y, t.x);
                     m.dist = t.dist;
                     placedCount++;
@@ -482,21 +489,19 @@
             if(!placed) showMessage("Module Dropped");
 
         } else {
-            // Grab logic
             if (crane.hookHeight > 10) {
                 showMessage("Hook too high!", "bad");
                 return;
             }
 
-            // Calculate Crane Tip Position Cartesian
             const tipX = Math.cos(crane.angle) * crane.length;
             const tipY = Math.sin(crane.angle) * crane.length;
 
             let best = null;
-            let minDist = 25; // Grab range
+            let minDist = 35; // Increased grab range slightly
 
             modules.forEach(m => {
-                if(m.placed) return; // Can't move placed ones
+                if(m.placed) return; 
                 
                 const mx = Math.cos(m.angle) * m.dist;
                 const my = Math.sin(m.angle) * m.dist;
@@ -535,7 +540,6 @@
     function update(dt) {
         if(gameState !== 'PLAYING') return;
 
-        // Timer
         timeLeft -= dt;
         if(timeLeft <= 0) {
             timeLeft = 0;
@@ -546,26 +550,21 @@
         const s = Math.floor(timeLeft % 60);
         document.getElementById('timer').innerText = `${m}:${s.toString().padStart(2, '0')}`;
 
-        // Crane Controls
         const rotSpeed = 1.5 * dt;
         const extSpeed = 100 * dt;
         const liftSpeed = 80 * dt;
 
-        // Rotation
-        if(keys.ArrowRight) crane.angle -= rotSpeed; // Clockwise
-        if(keys.ArrowLeft) crane.angle += rotSpeed;  // CCW
+        if(keys.ArrowRight) crane.angle -= rotSpeed; 
+        if(keys.ArrowLeft) crane.angle += rotSpeed;  
         
-        // Clamp Angle
         if(crane.angle < 0) crane.angle = 0;
         if(crane.angle > Math.PI) crane.angle = Math.PI;
 
-        // Extension
         if(keys.ArrowUp) crane.length += extSpeed;
         if(keys.ArrowDown) crane.length -= extSpeed;
         if(crane.length > crane.maxLength) crane.length = crane.maxLength;
         if(crane.length < crane.minLength) crane.length = crane.minLength;
 
-        // Hook Height
         if(keys.Space) {
             crane.hookHeight -= liftSpeed;
         } else {
@@ -574,41 +573,30 @@
         if(crane.hookHeight < 0) crane.hookHeight = 0;
         if(crane.hookHeight > 130) crane.hookHeight = 130; 
 
-        // --- COLLISION DETECTION (HURDLE) ---
-        // Hurdle is at Angle 90 (PI/2), which corresponds to X = 0.
-        // It spans distance 50 to 350.
-        // It has a height of 60.
-        
-        // Calculate Crane Tip X position relative to the center
-        // (x = cos(angle) * dist). If x crosses 0, we are at the hurdle.
+        // --- UPDATE HELD MODULE (Fixed: Must happen every frame) ---
+        if(crane.holding !== null) {
+            const mod = modules[crane.holding];
+            mod.angle = crane.angle;
+            mod.dist = crane.length;
+            mod.z = crane.hookHeight;
+        }
+
+        // --- COLLISION DETECTION ---
         const currentX = Math.cos(crane.angle) * crane.length;
-        
-        // Collision Width (Tolerance) - The wall is thin, but objects have width
         const collisionThreshold = 10; 
         
-        // Check if Crane Tip is inside the Hurdle's X-range
         if (Math.abs(currentX) < collisionThreshold) {
-            // Check if within the Hurdle's Distance range (Radial)
             if (crane.length > hurdle.distStart && crane.length < hurdle.distEnd) {
-                
-                // Check Collision Height
-                // Case 1: Holding a Module (Module hangs lower than hook)
-                // Module height is ~15 units. We check if bottom of module hits.
+                // Holding Module Check
                 if (crane.holding !== null) {
                     const mod = modules[crane.holding];
-                    mod.angle = crane.angle;
-                    mod.dist = crane.length;
-                    mod.z = crane.hookHeight;
-                    
-                    // If height is below hurdle height
                     if (mod.z < hurdle.height) {
                         endGame(false, "Mission Failed, Crane destroyed. Restart!");
                         return;
                     }
                 } 
-                // Case 2: Just the Hook (Empty)
+                // Just Hook Check
                 else {
-                    // Hook tip is at crane.hookHeight. 
                     if (crane.hookHeight < hurdle.height) {
                         endGame(false, "Mission Failed, Crane destroyed. Restart!");
                         return;
@@ -618,17 +606,10 @@
         }
     }
 
-    // --- Rendering Helpers ---
-
     function project(angle, dist, height) {
-        // Apply View Rotation Offset to Angle
         const effAngle = angle + viewRotationOffset;
-
         const x = Math.cos(effAngle) * dist;
-        const y = Math.sin(effAngle) * dist; // World Y (Depth)
-
-        // Screen X = World X
-        // Screen Y = World Y * ViewScale - Height * HeightScale
+        const y = Math.sin(effAngle) * dist; 
         return {
             x: CENTER_X + x * SCALE,
             y: CENTER_Y - (y * currentViewScaleY * SCALE) - (height * currentHeightScale * SCALE)
@@ -649,7 +630,6 @@
         ctx.fillStyle = '#2c3e50';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Draw Zones
         drawZone(Math.PI*0.75, Math.PI, '#e67e22', "Zone 1");
         drawZone(Math.PI*0.5, Math.PI*0.75, '#f1c40f', "Zone 2");
         drawZone(Math.PI*0.25, Math.PI*0.5, '#2ecc71', "Zone 3");
@@ -659,11 +639,10 @@
         drawHurdle();
         targets.forEach(t => drawTarget(t));
 
-        // Draw Modules
         modules.forEach(m => drawModuleShadow(m));
         modules.forEach(m => drawModule(m));
 
-        drawCrane(); // New Fancy Crane
+        drawCrane(); 
         drawLabels();
     }
 
@@ -671,14 +650,12 @@
         ctx.beginPath();
         const cx = CENTER_X;
         const cy = CENTER_Y;
-        
         ctx.moveTo(cx, cy);
         for(let a = startAngle; a <= endAngle; a += 0.05) {
             const p = projectShadow(a, 350);
             ctx.lineTo(p.x, p.y);
         }
         ctx.lineTo(cx, cy);
-        
         ctx.fillStyle = color;
         ctx.globalAlpha = 0.3;
         ctx.fill();
@@ -691,58 +668,37 @@
     function drawPlatform() {
         ctx.fillStyle = '#7f8c8d';
         ctx.beginPath();
-        // Use currentViewScaleY instead of hardcoded ISO constant
         ctx.ellipse(CENTER_X, CENTER_Y, 50*SCALE, 50*currentViewScaleY*SCALE, 0, 0, Math.PI*2);
         ctx.fill();
         ctx.stroke();
     }
 
     function drawHurdle() {
-        // Updated to span from Platform (50) to Zone Edge (350)
-        // Center of work area gap
         const startR = 50;
         const endR = 350;
-        const radius = (endR - startR) / 2; // Horizontal radius = 150
-        const centerDist = startR + radius; // 200
-        const hurdleAngle = Math.PI / 2; // Zone 2-3 Border
-        
-        // Vertical Height: We use a flattened semi-circle (semi-ellipse)
-        // to look good but not be impossible to clear.
-        const heightScale = 60 / radius; // Max height 60 units
+        const radius = (endR - startR) / 2; 
+        const centerDist = startR + radius; 
+        const hurdleAngle = Math.PI / 2; 
+        const heightScale = 60 / radius; 
 
         ctx.fillStyle = 'rgba(236, 240, 241, 0.5)';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
-        
         ctx.beginPath();
         
-        // Draw the Arc (Top Edge)
         const steps = 30;
         for (let i = 0; i <= steps; i++) {
-            const t = (i / steps) * Math.PI; // 0 to 180 degrees
-            
-            // Horizontal offset from center of hurdle
-            const offset = Math.cos(t) * radius; // -150 to +150
-            
-            // Height at this point (Elliptical profile)
+            const t = (i / steps) * Math.PI; 
+            const offset = Math.cos(t) * radius; 
             const h = Math.sin(t) * radius * heightScale;
-            
-            // Project to screen. Note: offset adds to centerDist
-            // We flip the order (centerDist - offset) to draw left-to-right or right-to-left
             const p = project(hurdleAngle, centerDist - offset, h);
-            
             if (i === 0) ctx.moveTo(p.x, p.y);
             else ctx.lineTo(p.x, p.y);
         }
-
-        // Draw the Base Line (Bottom Edge on ground)
         const startBase = project(hurdleAngle, startR, 0);
         const endBase = project(hurdleAngle, endR, 0);
-        
-        // Connect end of arc back to start
         ctx.lineTo(startBase.x, startBase.y); 
-        ctx.lineTo(endBase.x, endBase.y); // This line is technically redundant if filled, but good for stroke
-        
+        ctx.lineTo(endBase.x, endBase.y); 
         ctx.fill();
         ctx.stroke();
     }
@@ -759,9 +715,6 @@
             ctx.fillStyle = t.occupied ? '#555' : 'rgba(231, 76, 60, 0.5)';
             ctx.save();
             ctx.translate(p.x, p.y);
-            // Rotate target graphics if view rotates?
-            // Simple approach: Keep it oriented with ground.
-            // But we need to account for viewRotationOffset
             ctx.rotate(-(t.angle + viewRotationOffset)); 
             ctx.fillRect(-15*SCALE, -10*SCALE, 30*SCALE, 20*SCALE);
             ctx.restore();
@@ -802,10 +755,7 @@
         ctx.restore();
     }
 
-    // --- NEW REALISTIC CRANE VISUALS ---
-
     function drawTruss(startX, startY, endX, endY, width, color) {
-        // Helper to draw a truss structure (two lines with zig zag)
         const dx = endX - startX;
         const dy = endY - startY;
         const len = Math.sqrt(dx*dx + dy*dy);
@@ -814,18 +764,13 @@
         ctx.save();
         ctx.translate(startX, startY);
         ctx.rotate(angle);
-        
         ctx.strokeStyle = color;
         ctx.lineWidth = 2 * SCALE;
-        
-        // Top and Bottom rails
         const halfW = width / 2;
         ctx.beginPath();
         ctx.moveTo(0, -halfW); ctx.lineTo(len, -halfW);
         ctx.moveTo(0, halfW); ctx.lineTo(len, halfW);
         ctx.stroke();
-        
-        // Zig Zag
         ctx.lineWidth = 1 * SCALE;
         ctx.beginPath();
         const segs = 10;
@@ -841,22 +786,19 @@
     }
 
     function drawCrane() {
-        const craneColor = '#f1c40f'; // Yellow
+        const craneColor = '#f1c40f'; 
         const base = project(0, 0, 0); 
         const pivot = project(0, 0, crane.poleHeight); 
 
-        // --- SHADOWS (Draw First) ---
-        // We project components to height 0 (ground)
         const pivotShadow = project(0, 0, 0); 
         const tipShadow = project(crane.angle, crane.length, 0);
         const backTipShadow = project(crane.angle + Math.PI, crane.counterJibLength, 0);
-        const hookShadow = project(crane.angle, crane.length, 0); // Directly below hook tip
+        const hookShadow = project(crane.angle, crane.length, 0); 
 
         ctx.save();
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
         
-        // 1. Arm Shadow (Thick Line)
         ctx.lineWidth = 15 * SCALE;
         ctx.lineCap = 'round';
         ctx.beginPath();
@@ -864,79 +806,60 @@
         ctx.lineTo(tipShadow.x, tipShadow.y);
         ctx.stroke();
 
-        // 2. Counter-Jib Shadow
         ctx.lineWidth = 12 * SCALE;
         ctx.beginPath();
         ctx.moveTo(pivotShadow.x, pivotShadow.y);
         ctx.lineTo(backTipShadow.x, backTipShadow.y);
         ctx.stroke();
 
-        // 3. Cabin/Base Shadow
         ctx.beginPath();
         ctx.ellipse(pivotShadow.x, pivotShadow.y, 12*SCALE, 8*SCALE, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 4. HOOK SHADOW (The "Aiming Reticle")
-        // This helps the player align the crane
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // Darker for importance
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; 
         ctx.beginPath();
         ctx.ellipse(hookShadow.x, hookShadow.y, 8*SCALE, 4*SCALE, 0, 0, Math.PI*2);
         ctx.fill();
         
-        // Optional: Thread-thin line connecting hook to shadow for easier depth perception?
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        // Calculate hook actual position
         const hookRealPos = project(crane.angle, crane.length, crane.hookHeight);
         ctx.moveTo(hookRealPos.x, hookRealPos.y);
         ctx.lineTo(hookShadow.x, hookShadow.y);
         ctx.stroke();
-        
         ctx.restore();
-        // --- END SHADOWS ---
 
-
-        // 1. TOWER (Vertical Truss)
-        // Since it's vertical, we just draw straight up
         drawTruss(base.x, base.y, pivot.x, pivot.y, 15*SCALE, craneColor);
 
-        // 2. COUNTER-JIB (Backwards)
-        // Angle is opposite to crane.angle
         const backTip = project(crane.angle + Math.PI, crane.counterJibLength, crane.poleHeight);
         drawTruss(pivot.x, pivot.y, backTip.x, backTip.y, 10*SCALE, craneColor);
         
-        // Counterweight Block
         const cwPos = project(crane.angle + Math.PI, crane.counterJibLength - 10, crane.poleHeight);
-        ctx.fillStyle = '#95a5a6'; // Grey
+        ctx.fillStyle = '#95a5a6'; 
         ctx.beginPath();
         ctx.ellipse(cwPos.x, cwPos.y, 10*SCALE, 15*SCALE, 0, 0, Math.PI*2);
         ctx.fill();
 
-        // 3. MAIN JIB (Arm)
         const tip = project(crane.angle, crane.length, crane.poleHeight);
         drawTruss(pivot.x, pivot.y, tip.x, tip.y, 10*SCALE, craneColor);
 
-        // 4. CABIN (Blue box at pivot)
         ctx.fillStyle = '#3498db';
         ctx.fillRect(pivot.x - 8*SCALE, pivot.y - 15*SCALE, 16*SCALE, 20*SCALE);
 
-        // 5. CABLE
         const hookPos = project(crane.angle, crane.length, crane.hookHeight);
-        ctx.strokeStyle = 'white'; // White cable
+        ctx.strokeStyle = 'white'; 
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(tip.x, tip.y);
         ctx.lineTo(hookPos.x, hookPos.y);
         ctx.stroke();
 
-        // 6. HOOK
         ctx.fillStyle = crane.holding !== null ? '#2ecc71' : '#e74c3c';
         ctx.beginPath();
         ctx.arc(hookPos.x, hookPos.y, 5*SCALE, 0, Math.PI*2);
         ctx.fill();
         
-        // Height Indicator
         ctx.fillStyle = 'white';
         ctx.font = '10px Arial';
         ctx.fillText(`H:${Math.round(crane.hookHeight)}`, hookPos.x + 10, hookPos.y);
