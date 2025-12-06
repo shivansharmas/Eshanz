@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tech Challenge 2026: Raise the Roof Simulator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tech Challenge 2026: Raise the Roof (Iso-2D)</title>
     <style>
         body {
             margin: 0;
@@ -13,6 +13,8 @@
             overflow: hidden;
             color: white;
             user-select: none;
+            -webkit-user-select: none;
+            touch-action: none; /* Prevent mobile scrolling */
         }
         #game-container {
             position: relative;
@@ -21,10 +23,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            background: radial-gradient(circle at center, #34495e 0%, #2c3e50 100%);
         }
         canvas {
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            background-color: #95a5a6;
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
             border-radius: 4px;
         }
         #ui-layer {
@@ -32,15 +34,17 @@
             top: 20px;
             left: 20px;
             pointer-events: none;
+            z-index: 5;
         }
         .hud-panel {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.8);
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 10px;
             border-left: 5px solid #e67e22;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
-        h1 { margin: 0 0 10px 0; font-size: 24px; color: #f1c40f; }
+        h1 { margin: 0 0 10px 0; font-size: 24px; color: #f1c40f; text-transform: uppercase; }
         p { margin: 5px 0; font-size: 16px; }
         .key {
             display: inline-block;
@@ -54,11 +58,8 @@
         }
         #start-screen, #game-over-screen {
             position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.85);
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -74,13 +75,119 @@
             border-radius: 5px;
             cursor: pointer;
             margin: 10px;
-            transition: background 0.2s;
+            transition: background 0.2s, transform 0.1s;
+            font-weight: bold;
+            min-width: 250px;
         }
-        .btn:hover { background: #d35400; }
-        .grade-btn { min-width: 200px; }
+        .btn:hover { background: #d35400; transform: scale(1.05); }
         .hidden { display: none !important; }
         #timer { font-size: 32px; font-weight: bold; color: #e74c3c; }
         #score { color: #2ecc71; font-weight: bold; }
+        
+        /* Floating Message */
+        #message-toast {
+            position: absolute;
+            bottom: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 20;
+            pointer-events: none;
+        }
+
+        /* --- MOBILE CONTROLS --- */
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            height: 150px;
+            pointer-events: none; /* Let touches pass to buttons */
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 100;
+        }
+
+        /* Left Side: D-Pad */
+        .d-pad {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            backdrop-filter: blur(2px);
+        }
+        .d-btn {
+            position: absolute;
+            background: rgba(50, 50, 50, 0.8);
+            border: 2px solid #555;
+            border-radius: 8px;
+            width: 45px;
+            height: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            color: white;
+            user-select: none;
+            touch-action: none;
+        }
+        .d-btn:active { background: #e67e22; }
+        .d-up { top: 5px; left: 52px; }
+        .d-down { bottom: 5px; left: 52px; }
+        .d-left { top: 52px; left: 5px; }
+        .d-right { top: 52px; right: 5px; }
+
+        /* Right Side: Action Buttons */
+        .action-group {
+            position: relative;
+            width: 180px;
+            height: 150px;
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-end;
+            gap: 15px;
+        }
+        .act-btn {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.3);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            user-select: none;
+            touch-action: none;
+            backdrop-filter: blur(2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .act-btn:active { transform: scale(0.95); opacity: 0.8; }
+        
+        .btn-hook { background: #e74c3c; width: 80px; height: 80px; font-size: 16px; margin-bottom: 10px;} /* Big Red Button */
+        .btn-grab { background: #2ecc71; margin-bottom: 25px; } /* Green */
+        .btn-view { 
+            position: absolute; 
+            top: 0; right: 0; 
+            width: 50px; height: 50px; 
+            background: #3498db; 
+            font-size: 10px;
+        }
+
+        /* Hide controls on desktop if desired, currently showing for all as requested */
+        @media (min-width: 1024px) {
+            /* Optional: .mobile-controls { display: none; } */
+        }
     </style>
 </head>
 <body>
@@ -90,29 +197,44 @@
     
     <div id="ui-layer">
         <div class="hud-panel">
-            <h1>Raise the Roof 2026</h1>
+            <h1>Raise the Roof</h1>
             <p>Time: <span id="timer">04:00</span></p>
             <p>Placed: <span id="score">0/3</span></p>
-            <p>Current Grade: <span id="grade-display">--</span></p>
+            <p>Grade: <span id="grade-display">--</span></p>
         </div>
-        <div class="hud-panel">
-            <p><span class="key">←</span> <span class="key">→</span> Rotate Arm</p>
-            <p><span class="key">↑</span> <span class="key">↓</span> Extend/Retract</p>
-            <p><span class="key">SPACE</span> Lower/Raise Hook</p>
-            <p><span class="key">G</span> Grab/Drop Module</p>
+        <div class="hud-panel" style="font-size: 0.8em; opacity: 0.8;">
+            <p>⌨️ Keyboard / 📱 Touch</p>
+            <p><span class="key">Arrows</span> Move</p>
+            <p><span class="key">Space</span> Hook</p>
+            <p><span class="key">G</span> Grab</p>
+            <p><span class="key">V</span> View</p>
+        </div>
+    </div>
+    
+    <div id="message-toast">Message</div>
+
+    <!-- Mobile Controls Overlay -->
+    <div class="mobile-controls">
+        <div class="d-pad">
+            <div class="d-btn d-up" data-key="ArrowUp">⬆️</div>
+            <div class="d-btn d-left" data-key="ArrowLeft">⬅️</div>
+            <div class="d-btn d-right" data-key="ArrowRight">➡️</div>
+            <div class="d-btn d-down" data-key="ArrowDown">⬇️</div>
+        </div>
+        <div class="action-group">
+            <div class="act-btn btn-view" data-key="KeyV">VIEW</div>
+            <div class="act-btn btn-grab" data-key="KeyG">GRAB</div>
+            <div class="act-btn btn-hook" data-key="Space">HOOK</div>
         </div>
     </div>
 
     <div id="start-screen">
-        <h1 style="font-size: 48px; color: #f1c40f;">RAISE THE ROOF by ESHANZ</h1>
-        <p style="font-size: 20px; max-width: 600px; text-align: center; margin-bottom: 30px;">
-            Construct a lifting device to move housing modules from Zone 1 to the targets.<br>
-            Select your Grade Level to determine the difficulty.
-        </p>
-        <button class="btn grade-btn" onclick="startGame(0)">Grades 4-5 (Easier)</button>
-        <button class="btn grade-btn" onclick="startGame(1)">Grade 6 (Medium)</button>
-        <button class="btn grade-btn" onclick="startGame(2)">Grades 7-8 (Hard)</button>
-        <button class="btn grade-btn" onclick="startGame(3)">Grades 9-12 (Expert)</button>
+        <h1 style="font-size: 48px; color: #f1c40f; text-align:center;">RAISE THE ROOF</h1>
+        <p style="font-size: 20px; margin-bottom: 30px; color: #bdc3c7;">Select Difficulty Level</p>
+        <button class="btn" onclick="startGame(0)">Grades 4-5 (2 Large, 1 Small)</button>
+        <button class="btn" onclick="startGame(1)">Grade 6 (1 Large, 2 Small)</button>
+        <button class="btn" onclick="startGame(2)">Grades 7-8 (2 Small, 1 Stack)</button>
+        <button class="btn" onclick="startGame(3)">Grades 9-12 (1 Small, 2 Stack)</button>
     </div>
 
     <div id="game-over-screen" class="hidden">
@@ -127,146 +249,107 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Game State
-    let gameState = 'MENU'; // MENU, PLAYING, END
-    let lastTime = 0;
-    let timeLeft = 240; // 4 minutes
-    let gradeLevel = 0; // 0-3
-    let placedCount = 0;
+    // --- Constants & Config ---
+    
+    // View Settings
+    let currentViewScaleY = 0.6; // 0.6 for Iso
+    let currentHeightScale = 1.0; 
+    let viewRotationOffset = 0; // New: To rotate the world
+    
+    let viewMode = 0; // 0: Iso, 1: Diagonal, 2: Top
 
-    // Constants (Scale: 1 unit = 1 inch approx, but scaled for screen)
     let SCALE = 1;
-    let ORIGIN_X = 0;
-    let ORIGIN_Y = 0;
+    let CENTER_X = 0;
+    let CENTER_Y = 0;
 
-    // Entities
-    const modules = [];
-    const targets = [];
+    // Game Logic
+    let gameState = 'MENU';
+    let lastTime = 0;
+    let timeLeft = 240;
+    let placedCount = 0;
+    
+    // Crane Physics
     const crane = {
-        angle: Math.PI / 2, // Facing up/forward
+        angle: Math.PI, // Start facing LEFT (Zone 1)
         length: 150,
         maxLength: 300,
         minLength: 50,
-        height: 100, // Z-axis height (0-100)
-        hookHeight: 100, // 100 = fully up, 0 = ground
+        hookHeight: 100, // 0 = floor, 100 = top
         holding: null,
-        x: 0,
-        y: 0,
-        tipX: 0,
-        tipY: 0
+        poleHeight: 140, // Taller tower to clear the larger hurdle
+        counterJibLength: 80
     };
 
-    // Inputs
-    const keys = {
-        ArrowLeft: false,
-        ArrowRight: false,
-        ArrowUp: false,
-        ArrowDown: false,
-        Space: false,
-        KeyG: false
-    };
+    const modules = [];
+    const targets = [];
+    
+    // The Hurdle (Wall between Zone 2 and 3 -> 90 degrees)
+    // Updated: Spans from platform (50) to end of zone (350). Height approx 60.
+    const hurdle = { angle: Math.PI/2, distStart: 50, distEnd: 350, height: 60 };
 
-    let keyGToggle = false; // Prevent rapid toggle
+    const keys = { ArrowLeft:false, ArrowRight:false, ArrowUp:false, ArrowDown:false, Space:false, KeyG:false, KeyV:false };
+    let keyGToggle = false;
+    let keyVToggle = false;
 
-    // Grade Configuration
-    // Zone 1: Start (Left)
-    // Zone 2: Large Targets (Mid-Left)
-    // Zone 3: Small Targets (Mid-Right)
-    // Zone 4: Stack Targets (Right)
-    const TARGET_TYPES = {
-        LARGE: { radius: 35, color: '#9b59b6', scoreRadius: 35, type: 'large' }, // 10 inch dia
-        SMALL: { width: 40, height: 25, color: '#e74c3c', scoreRadius: 20, type: 'small' }, // Rectangle
-        STACK: { width: 15, height: 15, color: '#f39c12', scoreRadius: 10, type: 'stack' } // Precise pins
-    };
-
-    // Initial Setup based on rules
+    // --- Setup ---
+    
     function initLevel(grade) {
         modules.length = 0;
         targets.length = 0;
         placedCount = 0;
         timeLeft = 240;
         
-        // Modules start in Zone 1 (Far Left arc)
-        // We place them roughly at angle 150-170 degrees at distance ~200
-        for(let i=0; i<3; i++) {
-            modules.push({
-                id: i,
-                x: 0, 
-                y: 0,
-                angle: (150 + i * 12) * (Math.PI/180), // Polar coords for setup
-                dist: 250,
-                width: 30, // 7 inches scaled
-                height: 15, // 3.5 inches scaled
-                rotation: (150 + i * 12) * (Math.PI/180) + Math.PI/2,
-                color: '#8e44ad', // Purple/Brown wood
-                z: 0, // On ground
-                placed: false
-            });
-            // Convert polar to cartesian for initial position
-            let m = modules[i];
-            m.x = Math.cos(m.angle) * m.dist;
-            m.y = Math.sin(m.angle) * m.dist; // In canvas Y grows down, we'll flip logic in draw
-        }
-
-        // Target Setup based on Rules
-        // Zone 2: ~110-135 deg
-        // Zone 3: ~45-70 deg
-        // Zone 4: ~10-35 deg
-        
-        const configs = [
-            // G 4-5: 2 Large (Z2), 1 Small (Z3)
-            [
-                { type: 'LARGE', angle: 120, dist: 200 },
-                { type: 'LARGE', angle: 135, dist: 250 },
-                { type: 'SMALL', angle: 60, dist: 220 }
-            ],
-            // G 6: 1 Large (Z2), 2 Small (Z3)
-            [
-                { type: 'LARGE', angle: 125, dist: 220 },
-                { type: 'SMALL', angle: 50, dist: 200 },
-                { type: 'SMALL', angle: 70, dist: 240 }
-            ],
-            // G 7-8: 2 Small (Z3), 1 Stack (Z4)
-            [
-                { type: 'SMALL', angle: 50, dist: 210 },
-                { type: 'SMALL', angle: 65, dist: 250 },
-                { type: 'STACK', angle: 20, dist: 230 }
-            ],
-            // G 9-12: 1 Small (Z3), 2 Stack (Z4)
-            [
-                { type: 'SMALL', angle: 60, dist: 220 },
-                { type: 'STACK', angle: 15, dist: 200 },
-                { type: 'STACK', angle: 30, dist: 240 }
-            ]
-        ];
-
-        const config = configs[grade];
-        config.forEach(c => {
-            const tType = TARGET_TYPES[c.type];
-            targets.push({
-                x: Math.cos(c.angle * Math.PI/180) * c.dist,
-                y: Math.sin(c.angle * Math.PI/180) * c.dist, // Note: Y logic inverted later
-                ...tType,
-                occupied: false
-            });
-        });
-
         // Reset Crane
-        crane.angle = Math.PI / 2; // Straight up visually
+        crane.angle = Math.PI * 0.95; // Start near Zone 1
         crane.length = 150;
         crane.hookHeight = 100;
         crane.holding = null;
+
+        // 1. Create Modules in Zone 1 (Left: 135 deg to 180 deg)
+        for(let i=0; i<3; i++) {
+            const angleDeg = 145 + (i * 12);
+            const angle = angleDeg * (Math.PI/180);
+            modules.push({
+                id: i,
+                angle: angle,
+                dist: 280, 
+                width: 30, height: 15,
+                color: '#8e44ad',
+                z: 0,
+                placed: false
+            });
+        }
+
+        // 2. Create Targets
+        const configs = [
+            // G 4-5
+            [ {t:'L', a:110, d:200}, {t:'L', a:130, d:250}, {t:'S', a:60, d:220} ],
+            // G 6
+            [ {t:'L', a:110, d:220}, {t:'S', a:55, d:200}, {t:'S', a:75, d:240} ],
+            // G 7-8
+            [ {t:'S', a:60, d:210}, {t:'S', a:80, d:250}, {t:'K', a:20, d:230} ],
+            // G 9-12
+            [ {t:'S', a:50, d:220}, {t:'K', a:15, d:200}, {t:'K', a:35, d:240} ]
+        ];
+
+        configs[grade].forEach(c => {
+            targets.push({
+                type: c.t,
+                angle: c.a * (Math.PI/180),
+                dist: c.d,
+                occupied: false,
+                x: Math.cos(c.a * (Math.PI/180)) * c.d,
+                y: Math.sin(c.a * (Math.PI/180)) * c.d
+            });
+        });
     }
 
     function startGame(grade) {
-        gradeLevel = grade;
-        initLevel(gradeLevel);
+        initLevel(grade);
         document.getElementById('start-screen').classList.add('hidden');
         document.getElementById('game-over-screen').classList.add('hidden');
-        
-        const gradeNames = ["Grades 4-5", "Grade 6", "Grades 7-8", "Grades 9-12"];
-        document.getElementById('grade-display').innerText = gradeNames[grade];
-        
+        document.getElementById('grade-display').innerText = ["4-5", "6", "7-8", "HS"][grade];
+        document.getElementById('score').innerText = "0/3";
         gameState = 'PLAYING';
         requestAnimationFrame(gameLoop);
     }
@@ -274,356 +357,608 @@
     function resize() {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        ORIGIN_X = canvas.width / 2;
-        ORIGIN_Y = canvas.height - 100; // Bottom center-ish
+        CENTER_X = canvas.width / 2;
+        CENTER_Y = canvas.height * 0.75; // Lower down to make room for lifting
         SCALE = Math.min(canvas.width, canvas.height) / 800;
     }
     window.addEventListener('resize', resize);
     resize();
 
-    // Input Handling
+    // --- Inputs (Keyboard) ---
     window.addEventListener('keydown', e => {
-        if(e.code === 'Space') keys.Space = true;
-        if(keys.hasOwnProperty(e.code)) keys[e.code] = true;
-        
-        // Toggle Grab
-        if(e.code === 'KeyG') {
-            if(!keyGToggle) {
-                toggleGrab();
-                keyGToggle = true;
-            }
-        }
+        if(keys.hasOwnProperty(e.code) || e.code === 'Space') keys[e.code] = true;
+        if(e.code === 'KeyG' && !keyGToggle) { toggleGrab(); keyGToggle = true; }
+        if(e.code === 'KeyV' && !keyVToggle) { toggleView(); keyVToggle = true; }
+    });
+    window.addEventListener('keyup', e => {
+        if(keys.hasOwnProperty(e.code) || e.code === 'Space') keys[e.code] = false;
+        if(e.code === 'KeyG') keyGToggle = false;
+        if(e.code === 'KeyV') keyVToggle = false;
     });
 
-    window.addEventListener('keyup', e => {
-        if(e.code === 'Space') keys.Space = false;
-        if(keys.hasOwnProperty(e.code)) keys[e.code] = false;
-        if(e.code === 'KeyG') keyGToggle = false;
+    // --- Inputs (Touch) ---
+    // Prevent default touch actions (scrolling/zooming)
+    document.querySelectorAll('.d-btn, .act-btn').forEach(btn => {
+        btn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            const key = btn.getAttribute('data-key');
+            keys[key] = true;
+            
+            // Trigger single press toggles immediately
+            if(key === 'KeyG' && !keyGToggle) { toggleGrab(); keyGToggle = true; }
+            if(key === 'KeyV' && !keyVToggle) { toggleView(); keyVToggle = true; }
+            
+            btn.style.transform = "scale(0.9)";
+            btn.style.backgroundColor = "rgba(255,255,255,0.3)";
+        });
+        
+        btn.addEventListener('touchend', (e) => {
+            e.preventDefault();
+            const key = btn.getAttribute('data-key');
+            keys[key] = false;
+            
+            // Reset toggles
+            if(key === 'KeyG') keyGToggle = false;
+            if(key === 'KeyV') keyVToggle = false;
+            
+            btn.style.transform = "scale(1)";
+            btn.style.backgroundColor = ""; // Revert to CSS default
+        });
     });
+
+
+    function toggleView() {
+        viewMode = (viewMode + 1) % 3;
+        
+        if (viewMode === 0) {
+            // Isometric (Standard)
+            currentViewScaleY = 0.6;
+            currentHeightScale = 1.0;
+            viewRotationOffset = 0;
+            showMessage("View: Isometric");
+        } else if (viewMode === 1) {
+            // Diagonal (Side-ish)
+            currentViewScaleY = 0.6;
+            currentHeightScale = 1.0;
+            viewRotationOffset = -Math.PI / 4; // Rotate 45 degrees
+            showMessage("View: Diagonal");
+        } else {
+            // Top Down
+            currentViewScaleY = 1.0;
+            currentHeightScale = 0.0;
+            viewRotationOffset = 0;
+            showMessage("View: Top Down");
+        }
+    }
+
+    function showMessage(msg, type='neutral') {
+        const el = document.getElementById('message-toast');
+        el.innerText = msg;
+        el.style.color = type === 'good' ? '#2ecc71' : (type === 'bad' ? '#e74c3c' : 'white');
+        el.style.opacity = 1;
+        setTimeout(() => el.style.opacity = 0, 2000);
+    }
 
     function toggleGrab() {
         if (crane.holding !== null) {
-            // Drop
+            // Drop logic
             const m = modules[crane.holding];
-            m.z = 0; // Drop to ground
+            m.z = 0;
+            crane.holding = null;
+            
+            // Calculate exact Cartesian position of module on drop
+            const dropX = Math.cos(m.angle) * m.dist;
+            const dropY = Math.sin(m.angle) * m.dist;
             
             // Check placement
-            checkPlacement(m);
-            
-            crane.holding = null;
-        } else {
-            // Attempt Grab
-            // Must be near ground (hookHeight < 10)
-            if (crane.hookHeight > 10) return;
-
-            // Find nearest module
-            let bestDist = 20; // Grab radius
-            let bestId = -1;
-
-            modules.forEach(m => {
-                const dx = m.x - crane.tipX;
-                const dy = m.y - crane.tipY; // Canvas Y coordinates
+            let placed = false;
+            targets.forEach(t => {
+                if(t.occupied || m.placed) return; // Skip if target full or module already done
+                
+                // Dist check using the calculated drop coordinates
+                const dx = dropX - t.x;
+                const dy = dropY - t.y; 
                 const dist = Math.sqrt(dx*dx + dy*dy);
                 
-                // Canvas Y grows down. In our logic, positive Y is "up" on the schematic map,
-                // but we render inverted. We need to be careful with coordinate spaces.
-                // Let's stick to: Simulation logic uses X,Y relative to Origin.
-                // Rendering handles the flip.
+                let limit = 20; // Tolerance
+                if(t.type === 'K') limit = 12; // Harder
+
+                if(dist < limit) {
+                    // Success place
+                    t.occupied = true;
+                    m.placed = true;
+                    // Snap visually
+                    m.angle = Math.atan2(t.y, t.x);
+                    m.dist = t.dist;
+                    placedCount++;
+                    document.getElementById('score').innerText = placedCount + "/3";
+                    showMessage("Target Secured!", "good");
+                    placed = true;
+                    
+                    if(placedCount >= 3) endGame(true);
+                }
+            });
+            
+            if(!placed) showMessage("Module Dropped");
+
+        } else {
+            // Grab logic
+            if (crane.hookHeight > 10) {
+                showMessage("Hook too high!", "bad");
+                return;
+            }
+
+            // Calculate Crane Tip Position Cartesian
+            const tipX = Math.cos(crane.angle) * crane.length;
+            const tipY = Math.sin(crane.angle) * crane.length;
+
+            let best = null;
+            let minDist = 25; // Grab range
+
+            modules.forEach(m => {
+                if(m.placed) return; // Can't move placed ones
                 
-                if (dist < bestDist && !m.placed) {
-                    bestId = m.id;
+                const mx = Math.cos(m.angle) * m.dist;
+                const my = Math.sin(m.angle) * m.dist;
+
+                const d = Math.sqrt(Math.pow(mx-tipX, 2) + Math.pow(my-tipY, 2));
+                if(d < minDist) {
+                    minDist = d;
+                    best = m.id;
                 }
             });
 
-            if (bestId !== -1) {
-                crane.holding = bestId;
+            if (best !== null) {
+                crane.holding = best;
+                showMessage("Module Grabbed!", "good");
             }
         }
     }
 
-    function checkPlacement(module) {
-        // Find if colliding with a valid target
-        let hitTarget = false;
-        
-        targets.forEach(t => {
-            if (t.occupied) return; // Already full
-
-            const dx = module.x - t.x;
-            const dy = module.y - t.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-
-            if (dist < t.scoreRadius) {
-                // Success
-                t.occupied = true;
-                module.placed = true;
-                // Snap to center
-                module.x = t.x;
-                module.y = t.y;
-                module.rotation = 0; // Neaten up
-                placedCount++;
-                hitTarget = true;
-            }
-        });
-
-        document.getElementById('score').innerText = `${placedCount}/3`;
-
-        if (placedCount >= 3) {
-            endGame(true);
-        }
-    }
-
-    function endGame(win) {
+    function endGame(win, failureReason = "") {
         gameState = 'END';
         document.getElementById('game-over-screen').classList.remove('hidden');
-        document.getElementById('go-title').innerText = win ? "CONSTRUCTION COMPLETE!" : "TIME UP!";
-        document.getElementById('go-message').innerText = win ? "Great job raising the roof!" : "You didn't move all modules in time.";
+        const title = document.getElementById('go-title');
+        const msg = document.getElementById('go-message');
+        if(win) {
+            title.innerText = "MISSION COMPLETE!";
+            title.style.color = "#2ecc71";
+            msg.innerText = "Great work! All modules placed safely.";
+        } else {
+            title.innerText = "MISSION FAILED";
+            title.style.color = "#e74c3c";
+            msg.innerText = failureReason || "Time ran out.";
+        }
         document.getElementById('go-time').innerText = document.getElementById('timer').innerText;
     }
 
     function update(dt) {
-        if (gameState !== 'PLAYING') return;
+        if(gameState !== 'PLAYING') return;
 
         // Timer
         timeLeft -= dt;
-        if (timeLeft <= 0) {
+        if(timeLeft <= 0) {
             timeLeft = 0;
-            endGame(false);
+            if(placedCount < 3) endGame(false);
+            else endGame(true);
         }
-        
         const m = Math.floor(timeLeft / 60);
         const s = Math.floor(timeLeft % 60);
         document.getElementById('timer').innerText = `${m}:${s.toString().padStart(2, '0')}`;
 
-        // Crane Movement
-        const rotateSpeed = 1.5 * dt;
-        const extendSpeed = 100 * dt;
-        const winchSpeed = 80 * dt;
+        // Crane Controls
+        const rotSpeed = 1.5 * dt;
+        const extSpeed = 100 * dt;
+        const liftSpeed = 80 * dt;
 
-        if (keys.ArrowLeft) crane.angle += rotateSpeed;
-        if (keys.ArrowRight) crane.angle -= rotateSpeed;
+        // Rotation
+        if(keys.ArrowRight) crane.angle -= rotSpeed; // Clockwise
+        if(keys.ArrowLeft) crane.angle += rotSpeed;  // CCW
         
-        // Clamp Angle (0 to 180 degrees)
-        if (crane.angle > Math.PI) crane.angle = Math.PI;
-        if (crane.angle < 0) crane.angle = 0;
+        // Clamp Angle
+        if(crane.angle < 0) crane.angle = 0;
+        if(crane.angle > Math.PI) crane.angle = Math.PI;
 
-        if (keys.ArrowUp) crane.length += extendSpeed;
-        if (keys.ArrowDown) crane.length -= extendSpeed;
-
-        // Clamp Length
-        if (crane.length > crane.maxLength) crane.length = crane.maxLength;
-        if (crane.length < crane.minLength) crane.length = crane.minLength;
+        // Extension
+        if(keys.ArrowUp) crane.length += extSpeed;
+        if(keys.ArrowDown) crane.length -= extSpeed;
+        if(crane.length > crane.maxLength) crane.length = crane.maxLength;
+        if(crane.length < crane.minLength) crane.length = crane.minLength;
 
         // Hook Height
-        if (keys.Space) {
-            crane.hookHeight -= winchSpeed; // Lower
+        if(keys.Space) {
+            crane.hookHeight -= liftSpeed;
         } else {
-            crane.hookHeight += winchSpeed; // Auto Retract if not holding? No, let's make it manual or auto-up?
-            // Let's make Space = Lower, Release Space = Raise
+            crane.hookHeight += liftSpeed;
         }
+        if(crane.hookHeight < 0) crane.hookHeight = 0;
+        if(crane.hookHeight > 130) crane.hookHeight = 130; 
 
-        if (crane.hookHeight < 0) crane.hookHeight = 0;
-        if (crane.hookHeight > 100) crane.hookHeight = 100;
-
-        // Calculate Tip Position (Simulation Coords)
-        // Angle 0 = Right, PI = Left, PI/2 = Top (Screen visual is top-down)
-        // We map PI/2 to "Up" (-Y in canvas)
-        crane.tipX = Math.cos(crane.angle) * crane.length;
-        crane.tipY = Math.sin(crane.angle) * crane.length;
-
-        // Update held module
-        if (crane.holding !== null) {
-            const mod = modules[crane.holding];
-            mod.x = crane.tipX;
-            mod.y = crane.tipY;
-            mod.z = crane.hookHeight;
-            mod.rotation = crane.angle + Math.PI/2; // Orient with crane
+        // --- COLLISION DETECTION (HURDLE) ---
+        // Hurdle is at Angle 90 (PI/2), which corresponds to X = 0.
+        // It spans distance 50 to 350.
+        // It has a height of 60.
+        
+        // Calculate Crane Tip X position relative to the center
+        // (x = cos(angle) * dist). If x crosses 0, we are at the hurdle.
+        const currentX = Math.cos(crane.angle) * crane.length;
+        
+        // Collision Width (Tolerance) - The wall is thin, but objects have width
+        const collisionThreshold = 10; 
+        
+        // Check if Crane Tip is inside the Hurdle's X-range
+        if (Math.abs(currentX) < collisionThreshold) {
+            // Check if within the Hurdle's Distance range (Radial)
+            if (crane.length > hurdle.distStart && crane.length < hurdle.distEnd) {
+                
+                // Check Collision Height
+                // Case 1: Holding a Module (Module hangs lower than hook)
+                // Module height is ~15 units. We check if bottom of module hits.
+                if (crane.holding !== null) {
+                    const mod = modules[crane.holding];
+                    mod.angle = crane.angle;
+                    mod.dist = crane.length;
+                    mod.z = crane.hookHeight;
+                    
+                    // If height is below hurdle height
+                    if (mod.z < hurdle.height) {
+                        endGame(false, "Mission Failed, Crane destroyed. Restart!");
+                        return;
+                    }
+                } 
+                // Case 2: Just the Hook (Empty)
+                else {
+                    // Hook tip is at crane.hookHeight. 
+                    if (crane.hookHeight < hurdle.height) {
+                        endGame(false, "Mission Failed, Crane destroyed. Restart!");
+                        return;
+                    }
+                }
+            }
         }
+    }
+
+    // --- Rendering Helpers ---
+
+    function project(angle, dist, height) {
+        // Apply View Rotation Offset to Angle
+        const effAngle = angle + viewRotationOffset;
+
+        const x = Math.cos(effAngle) * dist;
+        const y = Math.sin(effAngle) * dist; // World Y (Depth)
+
+        // Screen X = World X
+        // Screen Y = World Y * ViewScale - Height * HeightScale
+        return {
+            x: CENTER_X + x * SCALE,
+            y: CENTER_Y - (y * currentViewScaleY * SCALE) - (height * currentHeightScale * SCALE)
+        };
+    }
+    
+    function projectShadow(angle, dist) {
+        const effAngle = angle + viewRotationOffset;
+        const x = Math.cos(effAngle) * dist;
+        const y = Math.sin(effAngle) * dist;
+        return {
+            x: CENTER_X + x * SCALE,
+            y: CENTER_Y - (y * currentViewScaleY * SCALE)
+        };
     }
 
     function draw() {
-        // Clear background
         ctx.fillStyle = '#2c3e50';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Transform coordinate system
-        // Move (0,0) to center bottom, Y points UP (visually)
-        ctx.save();
-        ctx.translate(ORIGIN_X, ORIGIN_Y);
-        ctx.scale(SCALE, -SCALE); // Flip Y so positive is UP
-
-        // Draw Work Area Zones
-        // Semi-circle radius approx 350
-        ctx.globalAlpha = 0.3;
         
-        // Zone 1 (Left) - PI to 3PI/4
-        ctx.fillStyle = '#e67e22'; // Orange
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0, 350, Math.PI * 0.75, Math.PI); ctx.fill();
+        // Draw Zones
+        drawZone(Math.PI*0.75, Math.PI, '#e67e22', "Zone 1");
+        drawZone(Math.PI*0.5, Math.PI*0.75, '#f1c40f', "Zone 2");
+        drawZone(Math.PI*0.25, Math.PI*0.5, '#2ecc71', "Zone 3");
+        drawZone(0, Math.PI*0.25, '#3498db', "Zone 4");
         
-        // Zone 2 - 3PI/4 to PI/2
-        ctx.fillStyle = '#f1c40f'; // Yellow
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0, 350, Math.PI * 0.5, Math.PI * 0.75); ctx.fill();
-
-        // Zone 3 - PI/2 to PI/4
-        ctx.fillStyle = '#2ecc71'; // Green
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0, 350, Math.PI * 0.25, Math.PI * 0.5); ctx.fill();
-
-        // Zone 4 - PI/4 to 0
-        ctx.fillStyle = '#3498db'; // Blue
-        ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0, 350, 0, Math.PI * 0.25); ctx.fill();
-
-        // Draw Zone Labels (Text needs untransformed context or flip back)
-        ctx.globalAlpha = 1.0;
-        
-        // Platform
-        ctx.fillStyle = '#95a5a6';
-        ctx.beginPath();
-        ctx.arc(0, 0, 50, 0, Math.PI * 2); // 24" diameter scaled
-        ctx.fill();
-        ctx.strokeStyle = '#7f8c8d';
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Draw Targets
-        targets.forEach(t => {
-            ctx.fillStyle = t.occupied ? '#555' : t.color;
-            if (t.type === 'large') {
-                ctx.beginPath(); ctx.arc(t.x, t.y, t.radius, 0, Math.PI*2); ctx.fill();
-            } else if (t.type === 'small') {
-                ctx.save();
-                ctx.translate(t.x, t.y);
-                ctx.fillRect(-t.width/2, -t.height/2, t.width, t.height);
-                // Hole in middle
-                ctx.fillStyle = '#2c3e50';
-                ctx.fillRect(-t.width/4, -t.height/4, t.width/2, t.height/2);
-                ctx.restore();
-            } else if (t.type === 'stack') {
-                ctx.save();
-                ctx.translate(t.x, t.y);
-                // Base
-                ctx.fillRect(-t.width, -t.height, t.width*2, t.height*2);
-                // Pins
-                ctx.fillStyle = '#fff';
-                ctx.beginPath(); ctx.arc(-5, 0, 3, 0, Math.PI*2); ctx.fill();
-                ctx.beginPath(); ctx.arc(5, 0, 3, 0, Math.PI*2); ctx.fill();
-                ctx.restore();
-            }
-        });
+        drawPlatform();
+        drawHurdle();
+        targets.forEach(t => drawTarget(t));
 
         // Draw Modules
-        modules.forEach(m => {
-            ctx.save();
-            ctx.translate(m.x, m.y);
-            ctx.rotate(m.rotation);
-            
-            // Shadow (based on height)
-            if (m.z > 5) {
-                ctx.save();
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                const shadowScale = 1 - (m.z/200);
-                ctx.scale(shadowScale, shadowScale);
-                ctx.fillRect(-m.width/2 + 5, -m.height/2 - 5, m.width, m.height);
-                ctx.restore();
-            }
+        modules.forEach(m => drawModuleShadow(m));
+        modules.forEach(m => drawModule(m));
 
-            // Body
-            ctx.fillStyle = m.color;
-            ctx.fillRect(-m.width/2, -m.height/2, m.width, m.height);
-            
-            // Lifting eyes
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(-m.width/3, 0, 2, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(m.width/3, 0, 2, 0, Math.PI*2); ctx.fill();
+        drawCrane(); // New Fancy Crane
+        drawLabels();
+    }
 
-            // Highlight if held
-            if (crane.holding === m.id) {
-                ctx.strokeStyle = '#f1c40f';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(-m.width/2, -m.height/2, m.width, m.height);
-            }
-            
-            ctx.restore();
-        });
-
-        // Draw Crane
-        // Arm
-        ctx.strokeStyle = '#34495e';
-        ctx.lineWidth = 10;
+    function drawZone(startAngle, endAngle, color, label) {
         ctx.beginPath();
-        ctx.moveTo(0,0);
-        ctx.lineTo(crane.tipX, crane.tipY);
-        ctx.stroke();
-
-        // Central pivot cap
-        ctx.fillStyle = '#2c3e50';
-        ctx.beginPath(); ctx.arc(0,0, 10, 0, Math.PI*2); ctx.fill();
-
-        // Cable/String
-        ctx.strokeStyle = '#bdc3c7';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(crane.tipX, crane.tipY);
-        // Visual Hook Height logic:
-        // High hookHeight (100) = Short string (visual radius small? No top down)
-        // Actually, top down, you can't see string length easily.
-        // We will represent height by the size of the hook marker.
-        ctx.lineTo(crane.tipX, crane.tipY); // Just a point top down
-        ctx.stroke();
-
-        // Hook / Magnet
-        ctx.save();
-        ctx.translate(crane.tipX, crane.tipY);
+        const cx = CENTER_X;
+        const cy = CENTER_Y;
         
-        // Scale hook based on height (closer = bigger)
-        const hookScale = 0.5 + (100 - crane.hookHeight)/100; 
-        ctx.scale(hookScale, hookScale);
-
-        ctx.fillStyle = crane.holding !== null ? '#27ae60' : '#c0392b'; // Green if holding, Red if not
-        ctx.beginPath();
-        ctx.arc(0,0, 8, 0, Math.PI*2);
+        ctx.moveTo(cx, cy);
+        for(let a = startAngle; a <= endAngle; a += 0.05) {
+            const p = projectShadow(a, 350);
+            ctx.lineTo(p.x, p.y);
+        }
+        ctx.lineTo(cx, cy);
+        
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.3;
         ctx.fill();
+        ctx.globalAlpha = 1.0;
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    
+    function drawPlatform() {
+        ctx.fillStyle = '#7f8c8d';
+        ctx.beginPath();
+        // Use currentViewScaleY instead of hardcoded ISO constant
+        ctx.ellipse(CENTER_X, CENTER_Y, 50*SCALE, 50*currentViewScaleY*SCALE, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+    }
+
+    function drawHurdle() {
+        // Updated to span from Platform (50) to Zone Edge (350)
+        // Center of work area gap
+        const startR = 50;
+        const endR = 350;
+        const radius = (endR - startR) / 2; // Horizontal radius = 150
+        const centerDist = startR + radius; // 200
+        const hurdleAngle = Math.PI / 2; // Zone 2-3 Border
+        
+        // Vertical Height: We use a flattened semi-circle (semi-ellipse)
+        // to look good but not be impossible to clear.
+        const heightScale = 60 / radius; // Max height 60 units
+
+        ctx.fillStyle = 'rgba(236, 240, 241, 0.5)';
         ctx.strokeStyle = 'white';
         ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Height Indicator Ring
-        ctx.strokeStyle = `rgba(255,255,255,${crane.hookHeight/100})`;
+        
         ctx.beginPath();
-        ctx.arc(0,0, 15, 0, Math.PI*2);
+        
+        // Draw the Arc (Top Edge)
+        const steps = 30;
+        for (let i = 0; i <= steps; i++) {
+            const t = (i / steps) * Math.PI; // 0 to 180 degrees
+            
+            // Horizontal offset from center of hurdle
+            const offset = Math.cos(t) * radius; // -150 to +150
+            
+            // Height at this point (Elliptical profile)
+            const h = Math.sin(t) * radius * heightScale;
+            
+            // Project to screen. Note: offset adds to centerDist
+            // We flip the order (centerDist - offset) to draw left-to-right or right-to-left
+            const p = project(hurdleAngle, centerDist - offset, h);
+            
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+        }
+
+        // Draw the Base Line (Bottom Edge on ground)
+        const startBase = project(hurdleAngle, startR, 0);
+        const endBase = project(hurdleAngle, endR, 0);
+        
+        // Connect end of arc back to start
+        ctx.lineTo(startBase.x, startBase.y); 
+        ctx.lineTo(endBase.x, endBase.y); // This line is technically redundant if filled, but good for stroke
+        
+        ctx.fill();
         ctx.stroke();
-        
-        ctx.restore();
+    }
 
-        ctx.restore();
+    function drawTarget(t) {
+        const p = project(t.angle, t.dist, 0);
+        if (t.type === 'L') {
+            ctx.fillStyle = t.occupied ? '#555' : 'rgba(155, 89, 182, 0.5)';
+            ctx.beginPath();
+            ctx.ellipse(p.x, p.y, 20*SCALE, 20*currentViewScaleY*SCALE, 0, 0, Math.PI*2);
+            ctx.fill();
+            if(t.occupied) ctx.stroke();
+        } else if (t.type === 'S') {
+            ctx.fillStyle = t.occupied ? '#555' : 'rgba(231, 76, 60, 0.5)';
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            // Rotate target graphics if view rotates?
+            // Simple approach: Keep it oriented with ground.
+            // But we need to account for viewRotationOffset
+            ctx.rotate(-(t.angle + viewRotationOffset)); 
+            ctx.fillRect(-15*SCALE, -10*SCALE, 30*SCALE, 20*SCALE);
+            ctx.restore();
+        } else if (t.type === 'K') {
+            ctx.fillStyle = t.occupied ? '#555' : 'rgba(243, 156, 18, 0.8)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, 5*SCALE, 0, Math.PI*2);
+            ctx.fill();
+        }
+    }
 
-        // Text Overlay for Zones (Manual transform back roughly)
+    function drawModuleShadow(m) {
+        if(m.placed) return;
+        const p = projectShadow(m.angle, m.dist);
+        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.beginPath();
+        ctx.ellipse(p.x, p.y, 15*SCALE, 8*SCALE, -(m.angle + viewRotationOffset), 0, Math.PI*2);
+        ctx.fill();
+    }
+
+    function drawModule(m) {
+        const p = project(m.angle, m.dist, m.z);
         ctx.save();
-        ctx.font = "bold 16px Arial";
-        ctx.fillStyle = "rgba(255,255,255,0.5)";
-        ctx.fillText("ZONE 1", ORIGIN_X - 250 * SCALE, ORIGIN_Y - 100 * SCALE);
-        ctx.fillText("ZONE 2", ORIGIN_X - 150 * SCALE, ORIGIN_Y - 250 * SCALE);
-        ctx.fillText("ZONE 3", ORIGIN_X + 150 * SCALE, ORIGIN_Y - 250 * SCALE);
-        ctx.fillText("ZONE 4", ORIGIN_X + 250 * SCALE, ORIGIN_Y - 100 * SCALE);
-        
-        // Hook Height Indicator Text near cursor
-        const screenTipX = ORIGIN_X + crane.tipX * SCALE;
-        const screenTipY = ORIGIN_Y - crane.tipY * SCALE; // Y flipped
-        ctx.fillStyle = "white";
-        ctx.font = "12px monospace";
-        ctx.fillText(`H: ${Math.round(crane.hookHeight)}%`, screenTipX + 15, screenTipY - 15);
+        ctx.translate(p.x, p.y);
+        ctx.rotate(-(m.angle + viewRotationOffset)); 
+        ctx.fillStyle = m.color;
+        ctx.fillRect(-15*SCALE, -7.5*SCALE, 30*SCALE, 15*SCALE);
+        ctx.fillStyle = '#9b59b6'; 
+        ctx.beginPath();
+        ctx.moveTo(-15*SCALE, -7.5*SCALE);
+        ctx.lineTo(15*SCALE, -7.5*SCALE);
+        ctx.lineTo(10*SCALE, -12*SCALE);
+        ctx.lineTo(-20*SCALE, -12*SCALE);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.beginPath(); ctx.arc(-10*SCALE, -7.5*SCALE, 2*SCALE, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(10*SCALE, -7.5*SCALE, 2*SCALE, 0, Math.PI*2); ctx.fill();
         ctx.restore();
     }
 
-    function gameLoop(timestamp) {
-        let dt = (timestamp - lastTime) / 1000;
-        lastTime = timestamp;
-        if(dt > 0.1) dt = 0.1; // Cap dt
+    // --- NEW REALISTIC CRANE VISUALS ---
 
+    function drawTruss(startX, startY, endX, endY, width, color) {
+        // Helper to draw a truss structure (two lines with zig zag)
+        const dx = endX - startX;
+        const dy = endY - startY;
+        const len = Math.sqrt(dx*dx + dy*dy);
+        const angle = Math.atan2(dy, dx);
+
+        ctx.save();
+        ctx.translate(startX, startY);
+        ctx.rotate(angle);
+        
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2 * SCALE;
+        
+        // Top and Bottom rails
+        const halfW = width / 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -halfW); ctx.lineTo(len, -halfW);
+        ctx.moveTo(0, halfW); ctx.lineTo(len, halfW);
+        ctx.stroke();
+        
+        // Zig Zag
+        ctx.lineWidth = 1 * SCALE;
+        ctx.beginPath();
+        const segs = 10;
+        const segLen = len / segs;
+        for(let i=0; i<segs; i++) {
+            ctx.moveTo(i*segLen, -halfW);
+            ctx.lineTo((i+1)*segLen, halfW);
+            ctx.moveTo(i*segLen, halfW);
+            ctx.lineTo((i+1)*segLen, -halfW);
+        }
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function drawCrane() {
+        const craneColor = '#f1c40f'; // Yellow
+        const base = project(0, 0, 0); 
+        const pivot = project(0, 0, crane.poleHeight); 
+
+        // --- SHADOWS (Draw First) ---
+        // We project components to height 0 (ground)
+        const pivotShadow = project(0, 0, 0); 
+        const tipShadow = project(crane.angle, crane.length, 0);
+        const backTipShadow = project(crane.angle + Math.PI, crane.counterJibLength, 0);
+        const hookShadow = project(crane.angle, crane.length, 0); // Directly below hook tip
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+        
+        // 1. Arm Shadow (Thick Line)
+        ctx.lineWidth = 15 * SCALE;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(pivotShadow.x, pivotShadow.y);
+        ctx.lineTo(tipShadow.x, tipShadow.y);
+        ctx.stroke();
+
+        // 2. Counter-Jib Shadow
+        ctx.lineWidth = 12 * SCALE;
+        ctx.beginPath();
+        ctx.moveTo(pivotShadow.x, pivotShadow.y);
+        ctx.lineTo(backTipShadow.x, backTipShadow.y);
+        ctx.stroke();
+
+        // 3. Cabin/Base Shadow
+        ctx.beginPath();
+        ctx.ellipse(pivotShadow.x, pivotShadow.y, 12*SCALE, 8*SCALE, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 4. HOOK SHADOW (The "Aiming Reticle")
+        // This helps the player align the crane
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)'; // Darker for importance
+        ctx.beginPath();
+        ctx.ellipse(hookShadow.x, hookShadow.y, 8*SCALE, 4*SCALE, 0, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Optional: Thread-thin line connecting hook to shadow for easier depth perception?
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // Calculate hook actual position
+        const hookRealPos = project(crane.angle, crane.length, crane.hookHeight);
+        ctx.moveTo(hookRealPos.x, hookRealPos.y);
+        ctx.lineTo(hookShadow.x, hookShadow.y);
+        ctx.stroke();
+        
+        ctx.restore();
+        // --- END SHADOWS ---
+
+
+        // 1. TOWER (Vertical Truss)
+        // Since it's vertical, we just draw straight up
+        drawTruss(base.x, base.y, pivot.x, pivot.y, 15*SCALE, craneColor);
+
+        // 2. COUNTER-JIB (Backwards)
+        // Angle is opposite to crane.angle
+        const backTip = project(crane.angle + Math.PI, crane.counterJibLength, crane.poleHeight);
+        drawTruss(pivot.x, pivot.y, backTip.x, backTip.y, 10*SCALE, craneColor);
+        
+        // Counterweight Block
+        const cwPos = project(crane.angle + Math.PI, crane.counterJibLength - 10, crane.poleHeight);
+        ctx.fillStyle = '#95a5a6'; // Grey
+        ctx.beginPath();
+        ctx.ellipse(cwPos.x, cwPos.y, 10*SCALE, 15*SCALE, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        // 3. MAIN JIB (Arm)
+        const tip = project(crane.angle, crane.length, crane.poleHeight);
+        drawTruss(pivot.x, pivot.y, tip.x, tip.y, 10*SCALE, craneColor);
+
+        // 4. CABIN (Blue box at pivot)
+        ctx.fillStyle = '#3498db';
+        ctx.fillRect(pivot.x - 8*SCALE, pivot.y - 15*SCALE, 16*SCALE, 20*SCALE);
+
+        // 5. CABLE
+        const hookPos = project(crane.angle, crane.length, crane.hookHeight);
+        ctx.strokeStyle = 'white'; // White cable
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(tip.x, tip.y);
+        ctx.lineTo(hookPos.x, hookPos.y);
+        ctx.stroke();
+
+        // 6. HOOK
+        ctx.fillStyle = crane.holding !== null ? '#2ecc71' : '#e74c3c';
+        ctx.beginPath();
+        ctx.arc(hookPos.x, hookPos.y, 5*SCALE, 0, Math.PI*2);
+        ctx.fill();
+        
+        // Height Indicator
+        ctx.fillStyle = 'white';
+        ctx.font = '10px Arial';
+        ctx.fillText(`H:${Math.round(crane.hookHeight)}`, hookPos.x + 10, hookPos.y);
+    }
+
+    function drawLabels() {
+        ctx.font = "bold 16px Arial";
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.textAlign = "center";
+        const p1 = project(Math.PI*0.875, 380, 0); ctx.fillText("ZONE 1", p1.x, p1.y);
+        const p2 = project(Math.PI*0.625, 380, 0); ctx.fillText("ZONE 2", p2.x, p2.y);
+        const p3 = project(Math.PI*0.375, 380, 0); ctx.fillText("ZONE 3", p3.x, p3.y);
+        const p4 = project(Math.PI*0.125, 380, 0); ctx.fillText("ZONE 4", p4.x, p4.y);
+    }
+
+    function gameLoop(timestamp) {
+        if(lastTime === 0) lastTime = timestamp;
+        const dt = (timestamp - lastTime) / 1000;
+        lastTime = timestamp;
         update(dt);
         draw();
-
-        if (gameState === 'PLAYING') {
-            requestAnimationFrame(gameLoop);
-        }
+        if(gameState === 'PLAYING') requestAnimationFrame(gameLoop);
     }
 </script>
 </body>
