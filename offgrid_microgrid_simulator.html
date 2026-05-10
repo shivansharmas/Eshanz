@@ -1,0 +1,1550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Off-Grid Microgrid Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+:root {
+  --bg: #0b1220;
+  --bg2: #0f172a;
+  --panel: #1a2438;
+  --panel2: #131c2e;
+  --border: #2a3650;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --dim: #64748b;
+  --accent: #4ade80;
+  --solar: #fbbf24;
+  --wind: #60a5fa;
+  --battery: #c084fc;
+  --danger: #ef4444;
+  --warn: #f97316;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: radial-gradient(ellipse at top, #14213d 0%, var(--bg) 60%);
+  color: var(--text);
+  margin: 0; padding: 18px;
+  min-height: 100vh;
+  font-size: 14px;
+}
+.header {
+  max-width: 1700px; margin: 0 auto 18px;
+  display: flex; justify-content: center; align-items: center; gap: 20px;
+}
+.header h1 {
+  margin: 0; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px;
+  display: flex; align-items: center; gap: 12px; text-align: center;
+}
+.header h1 .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 12px var(--accent); animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+.footer-note {
+  max-width: 1700px; margin: 24px auto 8px;
+  text-align: center; color: var(--muted); font-size: 0.82rem; line-height: 1.6;
+}
+
+.layout {
+  max-width: 1700px; margin: 0 auto;
+  display: grid; grid-template-columns: 340px 1fr; gap: 16px;
+  align-items: start;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+}
+.panel h3 {
+  margin: 0 0 12px; font-size: 0.78rem; text-transform: uppercase;
+  letter-spacing: 1px; color: var(--muted); font-weight: 700;
+  border-bottom: 1px solid var(--border); padding-bottom: 8px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.panel h3 .badge { font-size: 0.7rem; color: var(--dim); text-transform: none; letter-spacing: 0; font-weight: 500; }
+
+/* SIDEBAR */
+.sidebar { display: flex; flex-direction: column; gap: 12px; position: sticky; top: 12px; }
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+.field-label {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;
+}
+.field-label .val { font-weight: 700; font-size: 0.95rem; }
+.field-label .val.solar { color: var(--solar); }
+.field-label .val.wind { color: var(--wind); }
+.field-label .val.battery { color: var(--battery); }
+.field-label .val.house { color: var(--accent); }
+.field-label .hint { font-size: 0.7rem; color: var(--dim); font-weight: 500; }
+
+select {
+  width: 100%; padding: 9px 10px;
+  background: var(--bg2); color: var(--text);
+  border: 1px solid var(--border); border-radius: 7px;
+  font-size: 0.85rem; font-family: inherit;
+  cursor: pointer; outline: none;
+}
+select:focus { border-color: var(--accent); }
+.city-meta { font-size: 0.72rem; color: var(--dim); margin-top: 5px; line-height: 1.4; }
+
+.slider-row { display: flex; align-items: center; gap: 8px; }
+input[type="range"] {
+  flex: 1; -webkit-appearance: none; appearance: none;
+  height: 6px; background: var(--bg2); border-radius: 3px;
+  outline: none; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 8px rgba(74,222,128,0.5);
+  border: 2px solid #0b1220;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); cursor: pointer;
+  box-shadow: 0 0 8px rgba(74,222,128,0.5);
+  border: 2px solid #0b1220;
+}
+.btn-step {
+  width: 26px; height: 26px; border-radius: 5px;
+  background: var(--bg2); border: 1px solid var(--border);
+  color: var(--text); font-weight: 700; cursor: pointer;
+  font-size: 1rem; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.btn-step:hover { background: var(--accent); color: #000; border-color: var(--accent); }
+
+.toggles { display: flex; flex-direction: column; gap: 6px; }
+.toggle {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 8px 10px; cursor: pointer;
+  font-size: 0.82rem; transition: border 0.15s;
+}
+.toggle:hover { border-color: var(--accent); }
+.toggle input { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+.toggle .icon { font-size: 1rem; }
+.toggle .desc { color: var(--dim); font-size: 0.7rem; margin-left: auto; }
+
+.btn-storm {
+  width: 100%; padding: 10px; border-radius: 7px; cursor: pointer;
+  background: var(--bg2); color: var(--text); border: 1.5px solid var(--danger);
+  font-weight: 700; font-size: 0.82rem; text-transform: uppercase;
+  letter-spacing: 0.5px; transition: all 0.2s;
+}
+.btn-storm.active {
+  background: var(--danger); color: white;
+  box-shadow: 0 0 18px rgba(239,68,68,0.45);
+}
+
+.warning {
+  background: rgba(239,68,68,0.12); color: #fca5a5;
+  border: 1px solid var(--danger); border-radius: 8px;
+  padding: 10px 12px; font-size: 0.78rem; font-weight: 600;
+  display: none; line-height: 1.4;
+}
+.warning.show { display: block; }
+.warning.ok { background: rgba(74,222,128,0.10); color: var(--accent); border-color: var(--accent); display: block; }
+
+/* RIGHT VIZ */
+.viz { display: flex; flex-direction: column; gap: 14px; }
+
+/* Scene */
+.scene {
+  position: relative; height: 280px; overflow: hidden;
+  border-radius: 12px;
+  background: linear-gradient(to bottom, #1e3a5f 0%, #2a4a6f 50%, #1a2a3a 100%);
+}
+.scene.storm { background: linear-gradient(to bottom, #1f2937 0%, #374151 50%, #1a2030 100%); }
+.scene.night { background: linear-gradient(to bottom, #0c1525 0%, #1a2540 50%, #0a1020 100%); }
+.scene-svg { width: 100%; height: 100%; display: block; }
+
+.scene-overlay {
+  position: absolute; top: 10px; left: 14px; right: 14px;
+  display: flex; justify-content: space-between; align-items: flex-start;
+  pointer-events: none; z-index: 2;
+}
+.scene-stat {
+  background: rgba(11,18,32,0.7); backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.08);
+  padding: 5px 9px; border-radius: 6px;
+  font-size: 0.72rem; color: var(--text);
+  display: flex; align-items: center; gap: 5px;
+}
+.scene-stat .lab { color: var(--muted); }
+.scene-stat .num { font-weight: 700; }
+
+/* Metrics */
+.metrics {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px;
+}
+.metric {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.metric .lab { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.metric .num { font-size: 1.05rem; font-weight: 700; margin-top: 3px; }
+.metric.solar .num { color: var(--solar); }
+.metric.wind .num { color: var(--wind); }
+.metric.battery .num { color: var(--battery); }
+.metric.surplus .num { color: var(--accent); }
+.metric.deficit .num { color: var(--danger); }
+
+/* Charts */
+.chart-wrap { position: relative; height: 240px; }
+.chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.summary {
+  display: flex; flex-direction: column; gap: 4px;
+  font-size: 0.78rem;
+}
+.summary-item {
+  display: flex; justify-content: space-between;
+  padding: 5px 8px; border-radius: 5px;
+  background: var(--panel2);
+}
+.summary-item .month { color: var(--muted); font-weight: 600; }
+.summary-item.deficit { background: rgba(239,68,68,0.10); }
+.summary-item.deficit .month, .summary-item.deficit .val { color: #fca5a5; font-weight: 700; }
+.summary-item.surplus .val { color: var(--accent); font-weight: 600; }
+
+/* Costs */
+.costs { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+.cost-row {
+  display: flex; justify-content: space-between;
+  padding: 7px 10px; border-radius: 6px;
+  background: var(--panel2); border-left: 3px solid var(--border);
+}
+.cost-row.solar { border-left-color: var(--solar); }
+.cost-row.wind { border-left-color: var(--wind); }
+.cost-row.battery { border-left-color: var(--battery); }
+.cost-row .lab { color: var(--muted); }
+.cost-row .val { font-weight: 700; }
+.cost-row.total {
+  background: rgba(96,165,250,0.10); border-left-color: var(--wind);
+  font-size: 0.95rem; margin-top: 2px;
+}
+.cost-row.total .lab, .cost-row.total .val { color: var(--wind); font-weight: 800; }
+
+/* Tip footer */
+.tip {
+  font-size: 0.74rem; color: var(--dim); padding: 8px 10px;
+  background: rgba(96,165,250,0.06); border-radius: 6px;
+  border-left: 2px solid var(--wind); line-height: 1.5;
+}
+
+/* Storm canvas */
+#stormCanvas {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; opacity: 0; transition: opacity 0.5s;
+}
+#stormCanvas.active { opacity: 1; }
+
+/* Utility comparison */
+.util-grid {
+  display: grid; grid-template-columns: 1fr 1.1fr; gap: 16px;
+  align-items: stretch;
+}
+.util-controls { display: flex; flex-direction: column; gap: 12px; }
+.util-breakdown {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 0.82rem;
+}
+.util-row {
+  display: flex; justify-content: space-between;
+  padding: 7px 10px; border-radius: 6px;
+  background: var(--panel2); border-left: 3px solid var(--warn);
+}
+.util-row.total {
+  background: rgba(249,115,22,0.10); border-left-color: var(--warn);
+  font-size: 0.95rem;
+}
+.util-row.total .lab, .util-row.total .val { color: var(--warn); font-weight: 800; }
+.util-row .lab { color: var(--muted); }
+.util-row .val { font-weight: 700; }
+
+.verdict {
+  display: flex; flex-direction: column; justify-content: center;
+  align-items: center; text-align: center;
+  padding: 18px 16px; border-radius: 10px;
+  background: var(--panel2); border: 2px solid var(--border);
+  transition: all 0.3s;
+}
+.verdict.win {
+  background: linear-gradient(135deg, rgba(74,222,128,0.18) 0%, rgba(74,222,128,0.05) 100%);
+  border-color: var(--accent);
+}
+.verdict.lose {
+  background: linear-gradient(135deg, rgba(249,115,22,0.18) 0%, rgba(249,115,22,0.05) 100%);
+  border-color: var(--warn);
+}
+.verdict-label {
+  font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1.5px;
+  color: var(--muted); font-weight: 700; margin-bottom: 8px;
+}
+.verdict-headline {
+  font-size: 1.4rem; font-weight: 800; line-height: 1.2;
+  margin-bottom: 8px;
+}
+.verdict.win .verdict-headline { color: var(--accent); }
+.verdict.lose .verdict-headline { color: var(--warn); }
+.verdict-detail {
+  font-size: 0.82rem; color: var(--text); line-height: 1.5;
+  max-width: 360px;
+}
+
+/* Wind turbine rotation */
+@keyframes spin { to { transform: rotate(360deg); } }
+.turbine-blades { transform-origin: center; animation: spin 4s linear infinite; }
+.turbine-blades.fast { animation-duration: 1.2s; }
+.turbine-blades.slow { animation-duration: 8s; }
+.turbine-blades.stopped { animation-play-state: paused; }
+
+/* Sun motion */
+@keyframes shine { 0%, 100% { opacity: 0.9; } 50% { opacity: 1; } }
+.sun-rays { animation: shine 3s ease-in-out infinite; transform-origin: center; }
+
+@media (max-width: 1100px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .metrics { grid-template-columns: repeat(3, 1fr); }
+  .chart-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span class="dot"></span>Off-Grid Microgrid Simulator for Modular Home Community</h1>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <div class="panel">
+      <h3>Location <span class="badge">Climate data</span></h3>
+      <select id="citySelect">
+        <option value="sanjose">San Jose, CA</option>
+        <option value="chicago">Chicago, IL</option>
+        <option value="newyork">New York, NY</option>
+      </select>
+      <div class="city-meta" id="cityMeta"></div>
+    </div>
+
+    <div class="panel">
+      <h3>System Sizing</h3>
+
+      <div class="field">
+        <div class="field-label"><span>Houses</span><span class="val house" id="housesVal">10</span></div>
+        <div class="slider-row">
+          <button class="btn-step" onclick="bump('houses',-1)">−</button>
+          <input type="range" id="houses" min="1" max="100" value="10" step="1">
+          <button class="btn-step" onclick="bump('houses',1)">+</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>☀️ Solar (kW DC)</span><span class="val solar" id="solarVal">100</span></div>
+        <div class="slider-row">
+          <button class="btn-step" onclick="bump('solar',-10)">−</button>
+          <input type="range" id="solar" min="0" max="2000" value="100" step="10">
+          <button class="btn-step" onclick="bump('solar',10)">+</button>
+        </div>
+        <div class="field-label" style="margin-top:4px"><span class="hint" id="solarHint">~2.5 kW per house</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>🌀 Wind (kW)</span><span class="val wind" id="windVal">0</span></div>
+        <div class="slider-row">
+          <button class="btn-step" onclick="bump('wind',-10)">−</button>
+          <input type="range" id="wind" min="0" max="1000" value="0" step="10">
+          <button class="btn-step" onclick="bump('wind',10)">+</button>
+        </div>
+        <div class="field-label" style="margin-top:4px"><span class="hint" id="windHint">10 kW = 1 turbine</span></div>
+      </div>
+
+      <div class="field">
+        <div class="field-label"><span>🔋 Battery (kWh)</span><span class="val battery" id="batteryVal">200</span></div>
+        <div class="slider-row">
+          <button class="btn-step" onclick="bump('battery',-50)">−</button>
+          <input type="range" id="battery" min="0" max="10000" value="200" step="50">
+          <button class="btn-step" onclick="bump('battery',50)">+</button>
+        </div>
+        <div class="field-label" style="margin-top:4px"><span class="hint" id="batteryHint">~20 kWh per house</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Lifestyle Loads</h3>
+      <div class="toggles">
+        <label class="toggle"><input type="checkbox" id="hasEV"><span class="icon">🚗</span><span>EVs</span><span class="desc">+10 kWh/house/day</span></label>
+        <label class="toggle"><input type="checkbox" id="hasHeatPump"><span class="icon">♨️</span><span>Heat pumps</span><span class="desc">winter heat</span></label>
+        <label class="toggle"><input type="checkbox" id="hasHotTub"><span class="icon">🫧</span><span>Hot tubs</span><span class="desc">+7 kWh/house/day</span></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Scenario</h3>
+      <div class="field">
+        <div class="field-label"><span>Month to inspect</span></div>
+        <select id="monthSel">
+          <option value="auto">Auto (toughest month)</option>
+          <option value="0">January</option><option value="1">February</option>
+          <option value="2">March</option><option value="3">April</option>
+          <option value="4">May</option><option value="5">June</option>
+          <option value="6">July</option><option value="7">August</option>
+          <option value="8">September</option><option value="9">October</option>
+          <option value="10">November</option><option value="11">December</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="field-label"><span>Day type</span></div>
+        <select id="dayType">
+          <option value="typical">Typical day</option>
+          <option value="cloudy">Cloudy / low-wind day</option>
+          <option value="storm">Storm day (worst case)</option>
+        </select>
+      </div>
+      <button class="btn-storm" id="btnStorm" onclick="toggleStorm()">⛈️ Trigger 3-day storm</button>
+    </div>
+
+    <div id="warning" class="warning"></div>
+
+  </div>
+
+  <!-- VIZ AREA -->
+  <div class="viz">
+
+    <!-- Scene -->
+    <div class="panel" style="padding:0;overflow:hidden;">
+      <div class="scene" id="scene">
+        <canvas id="stormCanvas"></canvas>
+        <svg class="scene-svg" id="sceneSvg" viewBox="0 0 1200 280" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="scene-overlay">
+          <div class="scene-stat"><span class="lab">Hour</span><span class="num" id="sceneHour">12:00</span></div>
+          <div class="scene-stat"><span class="lab">SOC</span><span class="num" id="sceneSOC" style="color:var(--battery)">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics">
+      <div class="metric"><div class="lab">Daily demand</div><div class="num" id="mDemand">—</div></div>
+      <div class="metric solar"><div class="lab">☀️ Solar gen</div><div class="num" id="mSolar">—</div></div>
+      <div class="metric wind"><div class="lab">🌀 Wind gen</div><div class="num" id="mWind">—</div></div>
+      <div class="metric battery"><div class="lab">🔋 Batt → load</div><div class="num" id="mBatt">—</div></div>
+      <div class="metric"><div class="lab">Curtailed</div><div class="num" id="mCurtail">—</div></div>
+      <div class="metric" id="mNetWrap"><div class="lab">Net</div><div class="num" id="mNet">—</div></div>
+    </div>
+
+    <!-- Daily chart -->
+    <div class="panel">
+      <h3><span>24-Hour Energy Balance</span><span class="badge" id="chartTitle">Typical day</span></h3>
+      <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+    </div>
+
+    <!-- Annual + Cost -->
+    <div class="chart-row">
+      <div class="panel">
+        <h3><span>Annual Outlook</span><span class="badge">12-month simulation</span></h3>
+        <div class="chart-wrap" style="height:180px;"><canvas id="annualChart"></canvas></div>
+        <div id="annualSummary" class="summary" style="margin-top:10px;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;"></div>
+      </div>
+      <div class="panel">
+        <h3><span>Capital Cost</span><span class="badge">Community microgrid</span></h3>
+        <div class="field" style="margin-bottom:10px">
+          <div class="field-label"><span>Equipment cost tier</span></div>
+          <select id="costTier">
+            <option value="low">Low — best case</option>
+            <option value="med" selected>Medium — typical</option>
+            <option value="high">High — small / remote</option>
+          </select>
+        </div>
+        <div class="costs">
+          <div class="cost-row solar"><span class="lab" id="lcSolar">☀️ Solar</span><span class="val" id="cSolar">$0</span></div>
+          <div class="cost-row wind"><span class="lab" id="lcWind">🌀 Wind</span><span class="val" id="cWind">$0</span></div>
+          <div class="cost-row battery"><span class="lab" id="lcBatt">🔋 BESS</span><span class="val" id="cBatt">$0</span></div>
+          <div class="cost-row total"><span class="lab">Total CapEx</span><span class="val" id="cTotal">$0</span></div>
+          <div class="cost-row" style="border-left-color:var(--accent)"><span class="lab" style="color:var(--accent)">Cost / house</span><span class="val" id="cPerHouse" style="color:var(--accent)">$0</span></div>
+        </div>
+        <div class="tip" id="tipText" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <!-- Utility comparison -->
+    <div class="panel">
+      <h3><span>Microgrid vs. Utility Hookup</span><span class="badge">Is going off-grid worth it?</span></h3>
+      <div class="util-grid">
+        <div class="util-controls">
+          <div class="field">
+            <div class="field-label"><span>Distance to nearest power line</span><span class="val" id="distVal" style="color:var(--accent)">3 mi</span></div>
+            <div class="slider-row">
+              <button class="btn-step" onclick="bump('dist',-1)">−</button>
+              <input type="range" id="dist" min="1" max="10" value="3" step="1">
+              <button class="btn-step" onclick="bump('dist',1)">+</button>
+            </div>
+            <div class="field-label" style="margin-top:4px"><span class="hint">How far the utility would need to extend power lines</span></div>
+          </div>
+          <div class="util-breakdown" id="utilBreakdown"></div>
+        </div>
+        <div class="verdict" id="verdict">
+          <div class="verdict-label">Verdict</div>
+          <div class="verdict-headline" id="verdictHeadline">—</div>
+          <div class="verdict-detail" id="verdictDetail">—</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="footer-note">
+  Size solar, wind, and batteries for an off-grid community.<br>
+  Real NREL irradiance and wind data for San Jose, Chicago, and New York.
+</div>
+
+<script>
+/* ============================================================
+   AUTHENTIC CLIMATE DATA — sources: NREL NSRDB (irradiance),
+   NREL Wind Toolkit / NOAA (wind), residential load profiles
+   derived from NREL ResStock typical homes.
+   ============================================================ */
+const CITIES = {
+  sanjose: {
+    name: "San Jose, CA",
+    lat: 37.34,
+    // Monthly avg daily Global Horizontal Irradiance (kWh/m²/day) — NREL NSRDB
+    ghi: [2.6, 3.6, 4.9, 6.2, 7.0, 7.5, 7.4, 6.8, 5.7, 4.2, 2.9, 2.3],
+    // Avg wind speed at 30 m hub (m/s) — NREL Wind Toolkit, KSJC
+    wind: [3.2, 3.5, 4.0, 4.2, 4.0, 3.8, 3.5, 3.3, 3.2, 3.0, 3.1, 3.2],
+    // Avg daily electricity per home (kWh/day) — typical CA Title 24 Zone 4 home
+    load: [26, 24, 22, 20, 19, 20, 23, 23, 21, 20, 23, 27],
+    // Avg daylight bookends (decimal hours, local time)
+    sr: [7.3, 6.8, 6.2, 6.5, 6.0, 5.7, 5.8, 6.2, 6.7, 7.2, 6.8, 7.2],
+    ss: [17.2, 17.8, 19.2, 19.7, 20.2, 20.5, 20.4, 19.8, 19.0, 18.0, 17.0, 16.8],
+    desc: "Mediterranean climate. Strong sun May–Sep, weak Dec–Jan. Wind is poor (~10% capacity factor) — solar is the workhorse here.",
+    storm: { months: [11, 0, 1], solar: 0.10, wind: 1.6, demand: 1.25, label: "Pacific atmospheric river (Dec–Feb)" }
+  },
+  chicago: {
+    name: "Chicago, IL",
+    lat: 41.88,
+    ghi: [1.7, 2.5, 3.6, 4.6, 5.5, 6.1, 6.0, 5.3, 4.2, 2.9, 1.8, 1.4],
+    wind: [7.6, 7.5, 7.8, 7.5, 6.8, 6.0, 5.5, 5.4, 5.9, 6.8, 7.6, 7.8],
+    load: [55, 50, 38, 28, 26, 32, 38, 38, 30, 28, 38, 55],
+    sr: [7.3, 6.9, 6.3, 6.4, 5.6, 5.2, 5.3, 5.9, 6.4, 7.0, 6.7, 7.2],
+    ss: [16.5, 17.3, 19.0, 19.5, 20.1, 20.5, 20.4, 19.8, 18.8, 17.7, 16.5, 16.3],
+    desc: "Humid continental. Weak winter sun, strong winter wind (~25% capacity factor). Heating dominates Dec–Feb load.",
+    storm: { months: [0, 1, 2, 11], solar: 0.05, wind: 1.8, demand: 1.5, label: "Polar vortex / lake-effect (Nov–Mar)" }
+  },
+  newyork: {
+    name: "New York, NY",
+    lat: 40.71,
+    ghi: [1.9, 2.7, 3.8, 4.7, 5.4, 5.9, 5.8, 5.2, 4.2, 3.0, 1.9, 1.6],
+    wind: [5.3, 5.2, 5.4, 5.0, 4.6, 4.2, 4.0, 3.9, 4.2, 4.6, 5.0, 5.3],
+    load: [38, 35, 30, 26, 26, 32, 38, 37, 30, 27, 30, 37],
+    sr: [7.3, 6.9, 6.3, 6.5, 5.7, 5.4, 5.5, 6.0, 6.5, 7.0, 6.7, 7.2],
+    ss: [16.8, 17.5, 19.1, 19.6, 20.1, 20.5, 20.4, 19.8, 18.9, 17.8, 16.7, 16.5],
+    desc: "Coastal humid subtropical. Moderate sun, decent coastal wind (~20% CF). Mixed heating + summer AC peaks.",
+    storm: { months: [0, 1, 2, 10, 11], solar: 0.10, wind: 1.7, demand: 1.4, label: "Nor'easter (Nov–Mar)" }
+  }
+};
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+/* Normalized 24-hr load shape (sums to 1.0). Morning + evening peaks typical
+   of a residential community. Aggregated across houses, hourly resolution. */
+const LOAD_SHAPE = [
+  0.025,0.022,0.020,0.020,0.022,0.030,
+  0.045,0.058,0.054,0.044,0.040,0.038,
+  0.038,0.040,0.042,0.046,0.056,0.072,
+  0.082,0.078,0.064,0.050,0.038,0.030
+];
+
+/* Daily wind variability — captures Weibull-like distribution.
+   Real wind energy comes mostly from windy-than-average days because power ∝ v³.
+   These 30 daily multipliers average ~1.07 with realistic variance. */
+const WIND_DAILY_VAR = [
+  0.4, 0.7, 1.0, 1.5, 2.2, 1.0, 0.3, 0.8, 1.2, 0.9,
+  0.6, 1.4, 1.8, 0.5, 1.0, 0.8, 2.5, 1.1, 0.7, 1.3,
+  0.4, 1.6, 1.0, 0.9, 0.5, 1.2, 2.0, 0.8, 1.0, 1.1
+];
+/* Daily cloud variability — same idea for solar. Most days clear, some cloudy. */
+const CLOUD_DAILY_VAR = [
+  1.0, 0.95, 1.0, 0.7, 1.0, 1.0, 0.4, 1.0, 0.85, 1.0,
+  1.0, 0.6, 1.0, 1.0, 0.3, 1.0, 0.9, 1.0, 1.0, 0.75,
+  1.0, 1.0, 0.5, 1.0, 1.0, 0.8, 1.0, 0.95, 1.0, 1.0
+];
+
+/* Lifestyle load shapes (kWh/house/hour) — peak times reflect realistic use */
+const EV_SHAPE = [0.45,0.45,0.45,0.45,0.45,0.30,0,0,0,0,0,0,0,0,0,0,0.10,0.40,0.95,1.10,1.10,0.95,0.80,0.55]; // sums ~10 kWh
+const HP_SHAPE_WIN = [0.55,0.55,0.55,0.55,0.55,0.65,0.75,0.65,0.50,0.40,0.35,0.32,0.32,0.32,0.35,0.40,0.50,0.62,0.70,0.68,0.62,0.58,0.55,0.55]; // ~12 kWh winter
+const HP_SHAPE_SUM = [0.18,0.16,0.16,0.16,0.18,0.20,0.22,0.22,0.25,0.30,0.40,0.50,0.55,0.60,0.65,0.62,0.55,0.45,0.35,0.30,0.25,0.22,0.20,0.18]; // ~7 kWh summer (cooling)
+const HT_SHAPE = Array(24).fill(0.30); // constant draw
+
+/* PV / wind / battery model parameters */
+const PV_DERATE = 0.85;          // PVWatts-style (temp + DC-AC + soiling + wiring)
+const STC_GHI = 1000;            // W/m² standard test condition
+const WIND_CUT_IN = 3.0;         // m/s
+const WIND_RATED = 11.0;         // m/s
+const WIND_CUT_OUT = 25.0;       // m/s
+const BATT_RTE = 0.92;           // round-trip efficiency (LFP)
+const BATT_SOC_FLOOR = 0.15;     // can't discharge below 15%
+const WARMUP_DAYS = 3;           // for daily display steady-state
+
+/* Pricing tiers — community microgrid C&I scale (NREL ATB 2024 + Lazard LCOE)
+   Low: best-case (large project, favorable site, EPC competition)
+   Med: typical mid-sized C&I community microgrid
+   High: small project, complex permitting, remote site */
+const COST_TIERS = {
+  low:  { solar: 1800, wind: 3500, batt: 450, label: "Low (best case)" },
+  med:  { solar: 2200, wind: 4500, batt: 650, label: "Medium (typical)" },
+  high: { solar: 2800, wind: 6000, batt: 900, label: "High (small/remote)" }
+};
+
+/* Utility hookup costs — what it costs to bring traditional grid power
+   to a remote modular community (~real-world averages, EEI/RUS data) */
+const UTIL_LINE_PER_MILE = 250000;   // overhead distribution, rural
+const UTIL_SUBSTATION = 500000;       // small distribution substation
+const UTIL_SERVICE_PER_HOME = 5000;   // service drop + meter per home
+const UTIL_BILL_PER_HOUSE_MONTH = 200; // typical residential electric bill
+
+/* ============================================================
+   PHYSICS HELPERS
+   ============================================================ */
+function hourlyGHI(city, month, hour) {
+  const sr = city.sr[month], ss = city.ss[month];
+  if (hour <= sr || hour >= ss) return 0;
+  const dayLen = ss - sr;
+  // Sinusoidal shape, integral = dayLen·peak·(2/π)
+  // dailyTotal_Whm2 = peak_W * dayLen * 2/π, so peak = dailyTotal·π / (2·dayLen)
+  const dailyWh = city.ghi[month] * 1000;
+  const peak = dailyWh * Math.PI / (2 * dayLen);
+  const phase = Math.PI * (hour - sr) / dayLen; // 0..π across day
+  return Math.max(0, peak * Math.sin(phase));
+}
+
+function solarKW(ghi, capKW) {
+  // Real PV: P = capacity × (GHI/STC) × derate, capped at capacity
+  return Math.min(capKW, capKW * (ghi / STC_GHI) * PV_DERATE);
+}
+
+function hourlyWind(city, month, hour) {
+  // Stronger diurnal pattern — winds typically much higher mid-afternoon
+  // than at dawn. Range: 0.7×base to 1.3×base.
+  const base = city.wind[month];
+  const factor = 1 + 0.30 * Math.sin((hour - 6) * Math.PI / 12);
+  return Math.max(0, base * factor);
+}
+
+function windKW(v, capKW) {
+  if (v < WIND_CUT_IN || v >= WIND_CUT_OUT) return 0;
+  if (v >= WIND_RATED) return capKW;
+  // Cubic between cut-in and rated
+  return capKW * Math.pow((v - WIND_CUT_IN) / (WIND_RATED - WIND_CUT_IN), 3);
+}
+
+function loadKW(city, month, hour, houses, opts) {
+  const isWinter = (month <= 2 || month >= 10);
+  const isSummer = (month >= 5 && month <= 8);
+  const baseDaily = city.load[month];                 // kWh/house/day
+  let kw = baseDaily * LOAD_SHAPE[hour] * houses;     // base hourly kW
+  if (opts.ev)       kw += EV_SHAPE[hour] * houses;
+  if (opts.heatPump) kw += (isWinter ? HP_SHAPE_WIN[hour] : HP_SHAPE_SUM[hour]) * houses;
+  if (opts.hotTub)   kw += HT_SHAPE[hour] * houses;
+  return kw;
+}
+
+/* ============================================================
+   SIMULATION
+   Build 8760-hour year, then either:
+   - Display the typical day for the selected month (averaged)
+   - Display a storm day (worst case in that month)
+   ============================================================ */
+function simulateYear(cfg) {
+  const { city, solar, wind, battMax, opts, stormActive } = cfg;
+
+  // 8760 hourly values
+  const N = 8760;
+  const out = {
+    load: new Float64Array(N),
+    solarG: new Float64Array(N),
+    windG: new Float64Array(N),
+    soc: new Float64Array(N),       // kWh stored
+    served: new Float64Array(N),
+    unmet: new Float64Array(N),
+    curtail: new Float64Array(N),   // kWh wasted (battery full, surplus dumped)
+  };
+
+  let soc = battMax * 0.5;          // start half-charged
+  const socFloor = battMax * BATT_SOC_FLOOR;
+
+  // Track storm window: 3 worst days in the city's storm season (mid-Jan or mid-Feb)
+  // We pick day-of-year ~25-27 if Jan is a storm month, else first storm month + day 12-14
+  let stormStart = -1, stormEnd = -1;
+  if (stormActive) {
+    const sm = city.storm.months[0];
+    stormStart = monthDayToHour(sm, 12);
+    stormEnd = stormStart + 72;     // 3 days
+  }
+
+  let i = 0;
+  for (let m = 0; m < 12; m++) {
+    for (let d = 0; d < daysInMonth(m); d++) {
+      // Daily clearness variation: every 5th day is partly cloudy, every 9th is overcast
+      // (simulates typical weather patterns vs perfectly average days)
+      const dayOfMonth = d;
+      // Realistic daily variability — captures Weibull dist for wind, weather for sun
+      const cloudFactor = CLOUD_DAILY_VAR[dayOfMonth % 30];
+      const dailyWindFactor = WIND_DAILY_VAR[dayOfMonth % 30];
+
+      // Storm override
+      let inStorm = (i >= stormStart && i < stormEnd);
+      let solarMod = inStorm ? city.storm.solar : cloudFactor;
+      let windMod = inStorm ? city.storm.wind : dailyWindFactor;
+      let demandMod = inStorm ? city.storm.demand : 1.0;
+
+      for (let h = 0; h < 24; h++, i++) {
+        const ghi = hourlyGHI(city, m, h) * solarMod;
+        const v = hourlyWind(city, m, h) * windMod;
+        const sg = solarKW(ghi, solar);
+        const wg = windKW(v, wind);
+        const ld = loadKW(city, m, h, 1, opts) * demandMod; // per-house, scaled outside
+
+        out.solarG[i] = sg;
+        out.windG[i] = wg;
+        out.load[i] = ld;            // per-house load — multiply by houses outside
+
+        // Battery dispatch (per-house equivalent — we'll scale to actual houses)
+        // We run dispatch in actual scale later; here just store the raw curves.
+      }
+    }
+  }
+  return out;
+}
+
+function daysInMonth(m) {
+  return [31,28,31,30,31,30,31,31,30,31,30,31][m];
+}
+function monthDayToHour(month, day) {
+  let h = 0;
+  for (let i = 0; i < month; i++) h += daysInMonth(i) * 24;
+  return h + day * 24;
+}
+
+/* Run dispatch on the year given config, returns aggregate results */
+function dispatch(cfg, raw) {
+  const { houses, battMax } = cfg;
+  const N = raw.load.length;
+  const socArr = new Float64Array(N);
+  const servedArr = new Float64Array(N);
+  const unmetArr = new Float64Array(N);
+  const curtailArr = new Float64Array(N);
+
+  let soc = battMax * 0.5;
+  const socFloor = battMax * BATT_SOC_FLOOR;
+  const socCeil = battMax;
+
+  for (let i = 0; i < N; i++) {
+    const gen = raw.solarG[i] + raw.windG[i];        // kW (kWh in 1 hr)
+    const load = raw.load[i] * houses;
+    let served = 0, unmet = 0, curtail = 0;
+
+    if (gen >= load) {
+      served = load;
+      let surplus = gen - load;
+      // Charge battery (with charge efficiency = sqrt(RTE))
+      const room = socCeil - soc;
+      const chargeEff = Math.sqrt(BATT_RTE);
+      const stored = Math.min(room, surplus * chargeEff);
+      soc += stored;
+      curtail = surplus - (stored / chargeEff);
+    } else {
+      served = gen;
+      let deficit = load - gen;
+      // Discharge battery (with discharge efficiency = sqrt(RTE))
+      const dischargeEff = Math.sqrt(BATT_RTE);
+      const available = Math.max(0, soc - socFloor);
+      const drawFromBatt = Math.min(available, deficit / dischargeEff);
+      soc -= drawFromBatt;
+      const delivered = drawFromBatt * dischargeEff;
+      served += delivered;
+      unmet = deficit - delivered;
+    }
+
+    socArr[i] = soc;
+    servedArr[i] = served;
+    unmetArr[i] = unmet;
+    curtailArr[i] = curtail;
+  }
+
+  return { soc: socArr, served: servedArr, unmet: unmetArr, curtail: curtailArr };
+}
+
+/* Extract a representative day for display:
+   - "typical": average each hour across all days in the month
+   - "cloudy": use a cloudy-day index from the month
+   - "storm": use the worst 24-hour window in the storm period (or worst day in month) */
+function extractDay(raw, dispatched, cfg, displayMonth, dayType) {
+  const { houses, battMax } = cfg;
+  const out = {
+    load: new Array(24).fill(0),
+    solar: new Array(24).fill(0),
+    wind: new Array(24).fill(0),
+    served: new Array(24).fill(0),
+    unmet: new Array(24).fill(0),
+    soc: new Array(24).fill(0),
+    curtail: new Array(24).fill(0),
+  };
+
+  let startHour = monthDayToHour(displayMonth, 0);
+  const days = daysInMonth(displayMonth);
+
+  if (dayType === 'storm' && cfg.stormActive && cfg.city.storm.months.includes(displayMonth)) {
+    // Use the storm day (day 13 of the storm month — middle of storm window)
+    const dayIdx = 13;
+    return extractSingleDay(raw, dispatched, cfg, displayMonth, dayIdx);
+  }
+  if (dayType === 'cloudy') {
+    // Find a cloudy day (every 9th day per our model). Pick day 9 in month.
+    return extractSingleDay(raw, dispatched, cfg, displayMonth, 9);
+  }
+
+  // Typical: average across the month
+  for (let d = 0; d < days; d++) {
+    for (let h = 0; h < 24; h++) {
+      const i = startHour + d * 24 + h;
+      out.load[h]    += raw.load[i] * houses;
+      out.solar[h]   += raw.solarG[i];
+      out.wind[h]    += raw.windG[i];
+      out.served[h]  += dispatched.served[i];
+      out.unmet[h]   += dispatched.unmet[i];
+      out.soc[h]     += dispatched.soc[i];
+      out.curtail[h] += dispatched.curtail[i];
+    }
+  }
+  for (let h = 0; h < 24; h++) {
+    out.load[h]    /= days;
+    out.solar[h]   /= days;
+    out.wind[h]    /= days;
+    out.served[h]  /= days;
+    out.unmet[h]   /= days;
+    out.soc[h]     /= days;
+    out.curtail[h] /= days;
+  }
+  return out;
+}
+
+function extractSingleDay(raw, dispatched, cfg, month, dayIdx) {
+  const { houses } = cfg;
+  const out = {
+    load: [], solar: [], wind: [], served: [], unmet: [], soc: [], curtail: []
+  };
+  const startHour = monthDayToHour(month, dayIdx);
+  for (let h = 0; h < 24; h++) {
+    const i = startHour + h;
+    out.load.push(raw.load[i] * houses);
+    out.solar.push(raw.solarG[i]);
+    out.wind.push(raw.windG[i]);
+    out.served.push(dispatched.served[i]);
+    out.unmet.push(dispatched.unmet[i]);
+    out.soc.push(dispatched.soc[i]);
+    out.curtail.push(dispatched.curtail[i]);
+  }
+  return out;
+}
+
+/* Annual roll-up: total demand / generation / unmet by month */
+function rollupAnnual(raw, dispatched, cfg) {
+  const { houses } = cfg;
+  const monthly = MONTHS.map(() => ({ demand: 0, gen: 0, unmet: 0, blackoutHours: 0 }));
+  let i = 0;
+  for (let m = 0; m < 12; m++) {
+    for (let d = 0; d < daysInMonth(m); d++) {
+      for (let h = 0; h < 24; h++, i++) {
+        monthly[m].demand += raw.load[i] * houses;
+        monthly[m].gen += raw.solarG[i] + raw.windG[i];
+        monthly[m].unmet += dispatched.unmet[i];
+        if (dispatched.unmet[i] > 0.5) monthly[m].blackoutHours++;
+      }
+    }
+  }
+  return monthly;
+}
+
+/* ============================================================
+   SCENE RENDERING — SVG
+   ============================================================ */
+function renderScene(cfg, daySnap) {
+  const svg = document.getElementById('sceneSvg');
+  const { houses, solar, wind, battMax } = cfg;
+
+  // Use noon snapshot for visual state (or whichever is highest gen)
+  let bestHr = 12;
+  let bestGen = -1;
+  for (let h = 0; h < 24; h++) {
+    if (daySnap.solar[h] + daySnap.wind[h] > bestGen) {
+      bestGen = daySnap.solar[h] + daySnap.wind[h];
+      bestHr = h;
+    }
+  }
+  const hr = 12; // visual reference: noon
+  const hour12 = hr;
+  const isDay = (hour12 >= 6 && hour12 <= 19);
+  const sceneEl = document.getElementById('scene');
+  sceneEl.classList.remove('storm', 'night');
+  if (cfg.stormActive) sceneEl.classList.add('storm');
+  document.getElementById('sceneHour').innerText =
+    `${String(hour12).padStart(2,'0')}:00`;
+
+  const avgSOC = daySnap.soc.reduce((a,b)=>a+b,0) / 24;
+  const socPct = battMax > 0 ? (avgSOC / battMax * 100).toFixed(0) : 0;
+  document.getElementById('sceneSOC').innerText = battMax > 0 ? `${socPct}%` : 'N/A';
+
+  // Build SVG content
+  const W = 1200, H = 280;
+  let s = '';
+
+  // Sky gradient strip + clouds
+  s += `<defs>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a5f3a"/>
+      <stop offset="1" stop-color="#1f3a1f"/>
+    </linearGradient>
+    <linearGradient id="panelGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e3a5f"/>
+      <stop offset="1" stop-color="#0f1f3a"/>
+    </linearGradient>
+    <linearGradient id="houseGlow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbbf24" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#f59e0b" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>`;
+
+  // Sun or storm clouds
+  if (cfg.stormActive) {
+    // Dark clouds
+    s += `<g opacity="0.85">
+      <ellipse cx="200" cy="40" rx="80" ry="20" fill="#475569"/>
+      <ellipse cx="260" cy="35" rx="60" ry="18" fill="#64748b"/>
+      <ellipse cx="900" cy="50" rx="100" ry="22" fill="#475569"/>
+      <ellipse cx="970" cy="45" rx="70" ry="20" fill="#64748b"/>
+    </g>`;
+  } else {
+    // Sun
+    s += `<g class="sun-rays" transform="translate(140 60)">
+      <circle r="22" fill="#fbbf24"/>
+      <circle r="32" fill="#fbbf24" opacity="0.2"/>
+      <g stroke="#fbbf24" stroke-width="2" stroke-linecap="round">
+        <line x1="-38" y1="0" x2="-30" y2="0"/>
+        <line x1="38" y1="0" x2="30" y2="0"/>
+        <line x1="0" y1="-38" x2="0" y2="-30"/>
+        <line x1="0" y1="38" x2="0" y2="30"/>
+        <line x1="-27" y1="-27" x2="-21" y2="-21"/>
+        <line x1="27" y1="27" x2="21" y2="21"/>
+        <line x1="27" y1="-27" x2="21" y2="-21"/>
+        <line x1="-27" y1="27" x2="-21" y2="21"/>
+      </g>
+    </g>`;
+  }
+
+  // Ground
+  s += `<rect x="0" y="200" width="${W}" height="80" fill="url(#grass)"/>`;
+
+  // ============== HOUSES ==============
+  // Layout strategy:
+  //  1-10 houses: row of individual house icons, scale to fit
+  //  11-30: two rows
+  //  31-100: stylized neighborhood blocks
+  const houseLayout = layoutHouses(houses);
+  const houseGroupX = 280;
+  const houseGroupY = 130;
+  s += renderHouses(houseGroupX, houseGroupY, houseLayout, daySnap, cfg);
+
+  // ============== SOLAR PANELS ==============
+  // Right side, area scales with kW
+  if (solar > 0) {
+    s += renderSolar(820, 175, solar, cfg.stormActive);
+  }
+
+  // ============== WIND TURBINES ==============
+  // Behind houses, count = wind / 10 kW (1 turbine per 10 kW), capped visually at 6
+  if (wind > 0) {
+    s += renderWind(W, wind, cfg);
+  }
+
+  // ============== BATTERY BANK ==============
+  if (battMax > 0) {
+    s += renderBattery(1080, 165, battMax, avgSOC);
+  }
+
+  svg.innerHTML = s;
+}
+
+function layoutHouses(n) {
+  if (n <= 8)  return { mode: 'row',  count: n, scale: 1.0 };
+  if (n <= 24) return { mode: 'grid', cols: 8,  rows: Math.ceil(n / 8),  count: n, scale: 0.70 };
+  if (n <= 50) return { mode: 'grid', cols: 10, rows: Math.ceil(n / 10), count: n, scale: 0.50 };
+  return { mode: 'grid', cols: 14, rows: Math.ceil(n / 14), count: n, scale: 0.36 };
+}
+
+const ROOF_PALETTE = ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#a855f7', '#ec4899', '#f97316', '#06b6d4'];
+
+function renderHouses(x, y, layout, daySnap, cfg) {
+  // Determine darkened houses based on average unmet load
+  const totalUnmet = daySnap.unmet.reduce((a,b)=>a+b,0);
+  const totalLoad = daySnap.load.reduce((a,b)=>a+b,0);
+  const unmetFrac = totalLoad > 0 ? totalUnmet / totalLoad : 0;
+  const darkCount = Math.round(layout.count * unmetFrac);
+
+  let s = '';
+  if (layout.mode === 'row') {
+    // Row of adorable houses with trees in between
+    const sp = Math.min(58, 460 / Math.max(1, layout.count));
+    // Picket fence base line
+    const fenceY = y + 28 * layout.scale;
+    const fenceStartX = x - sp/2 + 4;
+    const fenceEndX = x + (layout.count - 1) * sp + sp/2 - 4;
+    s += `<line x1="${fenceStartX}" y1="${fenceY}" x2="${fenceEndX}" y2="${fenceY}" stroke="#e2e8f0" stroke-width="0.8" opacity="0.6"/>`;
+    for (let i = 0; i < layout.count; i++) {
+      const dark = i < darkCount;
+      s += houseIcon(x + i * sp, y, layout.scale, dark, i);
+      // Tree between houses
+      if (i < layout.count - 1 && sp > 38) {
+        s += treeIcon(x + i * sp + sp/2, y + 22 * layout.scale, layout.scale * 0.75);
+      }
+    }
+  } else {
+    // Grid layout — colorful little community
+    const cellW = 380 / layout.cols;
+    const cellH = 50 * layout.scale;
+    for (let r = 0; r < layout.rows; r++) {
+      for (let c = 0; c < layout.cols; c++) {
+        const idx = r * layout.cols + c;
+        if (idx >= layout.count) break;
+        const dark = idx < darkCount;
+        s += houseIcon(x + c * cellW, y - r * cellH, layout.scale, dark, idx);
+      }
+    }
+    // Sprinkle a few trees in front for visual softness
+    if (layout.scale >= 0.5) {
+      for (let i = 0; i < Math.min(4, layout.cols); i += 2) {
+        s += treeIcon(x + i * cellW + cellW * 0.5, y + 24 * layout.scale, layout.scale * 0.6);
+      }
+    }
+  }
+  return s;
+}
+
+function houseIcon(x, y, scale, dark, idx) {
+  const w = 32 * scale;
+  const h = 22 * scale;
+  const roofH = 14 * scale;
+  const roofColor = dark ? '#334155' : ROOF_PALETTE[idx % ROOF_PALETTE.length];
+  const wallColor = dark ? '#475569' : '#f8fafc';
+  const winColor  = dark ? '#1e293b' : '#fde68a';
+  const winFrame  = dark ? '#1e293b' : '#475569';
+  const doorColor = dark ? '#334155' : '#7c2d12';
+  const chimneyColor = dark ? '#475569' : '#9ca3af';
+  // For very small scales, drop the finer details
+  const detailed = scale >= 0.5;
+  let g = `<g transform="translate(${x} ${y})">`;
+  // soft shadow on ground
+  g += `<ellipse cx="0" cy="${h+1.5*scale}" rx="${w*0.55}" ry="${1.6*scale}" fill="#000" opacity="0.22"/>`;
+  // chimney (behind roof so peeks out top)
+  if (detailed) {
+    g += `<rect x="${w*0.22}" y="${-roofH-3*scale}" width="${3.5*scale}" height="${5*scale}" fill="${chimneyColor}"/>`;
+  }
+  // roof (with slight overhang)
+  g += `<polygon points="${-w/2 - 1.5*scale},0 ${w/2 + 1.5*scale},0 0,${-roofH}" fill="${roofColor}" stroke="rgba(0,0,0,0.18)" stroke-width="0.4"/>`;
+  // walls
+  g += `<rect x="${-w/2}" y="0" width="${w}" height="${h}" fill="${wallColor}" stroke="rgba(0,0,0,0.12)" stroke-width="0.4"/>`;
+  if (detailed) {
+    // window with cross
+    const wx = -w/2 + 3 * scale;
+    const wy = 4 * scale;
+    const ww = 7 * scale;
+    g += `<rect x="${wx}" y="${wy}" width="${ww}" height="${ww}" fill="${winColor}" stroke="${winFrame}" stroke-width="0.5"/>`;
+    g += `<line x1="${wx + ww/2}" y1="${wy}" x2="${wx + ww/2}" y2="${wy + ww}" stroke="${winFrame}" stroke-width="0.4"/>`;
+    g += `<line x1="${wx}" y1="${wy + ww/2}" x2="${wx + ww}" y2="${wy + ww/2}" stroke="${winFrame}" stroke-width="0.4"/>`;
+    // door
+    g += `<rect x="${1*scale}" y="${10*scale}" width="${7*scale}" height="${12*scale}" fill="${doorColor}" stroke="rgba(0,0,0,0.2)" stroke-width="0.3"/>`;
+    g += `<circle cx="${6.5*scale}" cy="${16*scale}" r="${0.8*scale}" fill="${dark ? '#475569' : '#fbbf24'}"/>`;
+  } else {
+    // Simplified: just a small window blob and door
+    g += `<rect x="${-w/2 + 2*scale}" y="${4*scale}" width="${5*scale}" height="${5*scale}" fill="${winColor}"/>`;
+    g += `<rect x="${1*scale}" y="${10*scale}" width="${5*scale}" height="${10*scale}" fill="${doorColor}"/>`;
+  }
+  g += `</g>`;
+  return g;
+}
+
+function treeIcon(x, y, scale) {
+  const trunkW = 1.5 * scale;
+  const trunkH = 5 * scale;
+  const r = 5 * scale;
+  return `<g transform="translate(${x} ${y})">
+    <rect x="${-trunkW}" y="${-trunkH/2}" width="${trunkW*2}" height="${trunkH}" fill="#78350f"/>
+    <circle cx="${-r*0.4}" cy="${-r*0.8}" r="${r*0.85}" fill="#16a34a"/>
+    <circle cx="${r*0.4}" cy="${-r*0.9}" r="${r*0.8}" fill="#22c55e"/>
+    <circle cx="0" cy="${-r*1.3}" r="${r*0.75}" fill="#15803d"/>
+  </g>`;
+}
+
+function renderSolar(x, y, kW, stormActive) {
+  // Each visible "panel block" represents a solar array of ~80kW
+  const blocks = Math.min(12, Math.max(1, Math.ceil(kW / 80)));
+  const cols = Math.min(4, blocks);
+  const rows = Math.ceil(blocks / cols);
+  const opacity = stormActive ? 0.45 : 1.0;
+  const blockW = 48, blockH = 18, gapX = 4, gapY = 8;
+
+  let s = `<g opacity="${opacity}">`;
+  for (let i = 0; i < blocks; i++) {
+    const c = i % cols, r = Math.floor(i / cols);
+    const bx = x + c * (blockW + gapX);
+    const by = y + r * (blockH + gapY);
+    s += `<g transform="translate(${bx} ${by})">
+      <line x1="6" y1="${blockH-1}" x2="9" y2="${blockH+5}" stroke="#475569" stroke-width="1.1"/>
+      <line x1="${blockW-6}" y1="${blockH-1}" x2="${blockW-9}" y2="${blockH+5}" stroke="#475569" stroke-width="1.1"/>
+      <polygon points="0,${blockH-1} ${blockW},${blockH-1} ${blockW-4},2 4,2" fill="url(#panelGrad)" stroke="#1e3a5f" stroke-width="0.6"/>
+      <line x1="${blockW*0.25 + 2}" y1="2" x2="${blockW*0.25 - 1}" y2="${blockH-1}" stroke="rgba(147,197,253,0.55)" stroke-width="0.4"/>
+      <line x1="${blockW*0.5}" y1="2" x2="${blockW*0.5}" y2="${blockH-1}" stroke="rgba(147,197,253,0.65)" stroke-width="0.4"/>
+      <line x1="${blockW*0.75 - 2}" y1="2" x2="${blockW*0.75 + 1}" y2="${blockH-1}" stroke="rgba(147,197,253,0.55)" stroke-width="0.4"/>
+      <line x1="3" y1="${blockH/2 + 1}" x2="${blockW-3}" y2="${blockH/2 + 1}" stroke="rgba(147,197,253,0.5)" stroke-width="0.4"/>
+    </g>`;
+  }
+  const totalW = cols * (blockW + gapX) - gapX;
+  const totalH = rows * (blockH + gapY) - gapY;
+  s += `<text x="${x + totalW/2}" y="${y + totalH + 16}" text-anchor="middle" font-size="10" fill="#fbbf24" font-weight="700">${kW} kW Solar</text>`;
+  s += `</g>`;
+  return s;
+}
+
+function renderWind(W, kW, cfg) {
+  const turbines = Math.min(6, Math.max(1, Math.round(kW / 10)));
+  // Spin speed driven by actual noon wind for the selected month
+  const noonWind = hourlyWind(cfg.city, cfg.month, 12) *
+                   (cfg.stormActive ? cfg.city.storm.wind : 1);
+  let dur = 4.0;
+  let spinning = true;
+  if (noonWind < WIND_CUT_IN) { spinning = false; }
+  else if (noonWind > WIND_RATED) { dur = 1.2; }
+  else if (noonWind < 5)         { dur = 7.0; }
+  else                            { dur = 4.0; }
+
+  let s = '';
+  for (let i = 0; i < turbines; i++) {
+    const tx = 60 + i * 38;
+    const ty = 100;
+    const animMarkup = spinning
+      ? `<animateTransform attributeName="transform" type="rotate" from="0 0 0" to="360 0 0" dur="${dur}s" repeatCount="indefinite"/>`
+      : '';
+    s += `<g transform="translate(${tx} ${ty})">
+      <polygon points="-2.2,0 2.2,0 1.2,80 -1.2,80" fill="#f1f5f9" stroke="#94a3b8" stroke-width="0.4"/>
+      <ellipse cx="0" cy="80" rx="5" ry="1.5" fill="#475569" opacity="0.5"/>
+      <rect x="-2.6" y="-3" width="9" height="5" rx="1.5" fill="#cbd5e1" stroke="#94a3b8" stroke-width="0.3"/>
+      <rect x="6.4" y="-1.5" width="2.5" height="2" rx="0.5" fill="#94a3b8"/>
+      <g>
+        ${animMarkup}
+        <ellipse cx="0" cy="-15" rx="1.4" ry="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.3"/>
+        <g transform="rotate(120)"><ellipse cx="0" cy="-15" rx="1.4" ry="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.3"/></g>
+        <g transform="rotate(240)"><ellipse cx="0" cy="-15" rx="1.4" ry="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="0.3"/></g>
+        <circle cx="0" cy="0" r="2" fill="#64748b"/>
+      </g>
+    </g>`;
+  }
+  if (turbines > 0) {
+    s += `<text x="${60 + (turbines - 1) * 38 / 2}" y="195" text-anchor="middle" font-size="10" fill="#60a5fa" font-weight="700">${kW} kW Wind</text>`;
+  }
+  return s;
+}
+
+function renderBattery(x, y, kWh, soc) {
+  // Each container ~ 1000 kWh installed (real-world C&I BESS containers)
+  const containers = Math.min(4, Math.max(1, Math.ceil(kWh / 1000)));
+  const cw = 28, ch = 22, gap = 4;
+  const fillPct = kWh > 0 ? Math.max(0, Math.min(1, soc / kWh)) : 0;
+  const fillColor = fillPct > 0.5 ? '#4ade80' : fillPct > 0.2 ? '#fbbf24' : '#ef4444';
+
+  let s = '';
+  for (let i = 0; i < containers; i++) {
+    const cx = x + i * (cw + gap);
+    s += `<g transform="translate(${cx} ${y})">
+      <ellipse cx="${cw/2}" cy="${ch + 1.5}" rx="${cw/2}" ry="1.5" fill="#000" opacity="0.25"/>
+      <rect x="0" y="0" width="${cw}" height="${ch}" fill="#e2e8f0" stroke="#334155" stroke-width="0.6" rx="0.5"/>
+      <rect x="0" y="0" width="${cw}" height="3" fill="#cbd5e1" stroke="#94a3b8" stroke-width="0.3"/>
+      <line x1="${cw/3}" y1="3" x2="${cw/3}" y2="${ch-3}" stroke="#94a3b8" stroke-width="0.4"/>
+      <line x1="${2*cw/3}" y1="3" x2="${2*cw/3}" y2="${ch-3}" stroke="#94a3b8" stroke-width="0.4"/>
+      <rect x="${cw/2 - 4}" y="${ch/2 - 3}" width="8" height="6" fill="#cbd5e1" stroke="#475569" stroke-width="0.4"/>
+      <line x1="${cw/2 + 2.5}" y1="${ch/2}" x2="${cw/2 + 3.5}" y2="${ch/2}" stroke="#1e293b" stroke-width="0.5"/>
+      <rect x="2" y="${ch - 3}" width="${cw - 4}" height="2" fill="#1e293b"/>
+      <rect x="2" y="${ch - 3}" width="${(cw - 4) * fillPct}" height="2" fill="${fillColor}"/>
+      <text x="${cw/2}" y="9" text-anchor="middle" font-size="3.2" fill="#475569" font-weight="700" letter-spacing="0.3">BESS</text>
+    </g>`;
+  }
+  const totalW = containers * (cw + gap) - gap;
+  s += `<text x="${x + totalW/2}" y="${y + ch + 16}" text-anchor="middle" font-size="10" fill="#c084fc" font-weight="700">${kWh} kWh BESS · ${(fillPct*100).toFixed(0)}%</text>`;
+  return s;
+}
+
+/* ============================================================
+   STORM PARTICLES
+   ============================================================ */
+const stormCanvas = document.getElementById('stormCanvas');
+const stormCtx = stormCanvas.getContext('2d');
+let particles = [];
+let stormAnim = null;
+function initStormParticles() {
+  const w = stormCanvas.offsetWidth, h = stormCanvas.offsetHeight;
+  stormCanvas.width = w; stormCanvas.height = h;
+  particles = [];
+  for (let i = 0; i < 150; i++) {
+    particles.push({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      v: Math.random() * 6 + 8,
+      l: Math.random() * 8 + 4
+    });
+  }
+}
+function drawStorm() {
+  const w = stormCanvas.width, h = stormCanvas.height;
+  stormCtx.clearRect(0, 0, w, h);
+  stormCtx.strokeStyle = 'rgba(186, 200, 220, 0.6)';
+  stormCtx.lineWidth = 1.2;
+  particles.forEach(p => {
+    stormCtx.beginPath();
+    stormCtx.moveTo(p.x, p.y);
+    stormCtx.lineTo(p.x - p.v * 0.3, p.y + p.l);
+    stormCtx.stroke();
+    p.y += p.v;
+    p.x -= p.v * 0.3;
+    if (p.y > h) { p.y = -10; p.x = Math.random() * w + 100; }
+    if (p.x < -20) p.x = w;
+  });
+  stormAnim = requestAnimationFrame(drawStorm);
+}
+function startStorm() {
+  initStormParticles();
+  stormCanvas.classList.add('active');
+  if (!stormAnim) drawStorm();
+}
+function stopStorm() {
+  stormCanvas.classList.remove('active');
+  if (stormAnim) { cancelAnimationFrame(stormAnim); stormAnim = null; }
+  stormCtx.clearRect(0, 0, stormCanvas.width, stormCanvas.height);
+}
+
+/* ============================================================
+   CHARTS
+   ============================================================ */
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.color = '#94a3b8';
+
+const dailyCtx = document.getElementById('dailyChart').getContext('2d');
+const dailyChart = new Chart(dailyCtx, {
+  type: 'bar',
+  data: {
+    labels: Array.from({length: 24}, (_, i) => `${i}:00`),
+    datasets: [
+      { label: 'Solar generation',  data: [], type: 'bar', backgroundColor: 'rgba(251,191,36,0.7)',  stack: 'gen' },
+      { label: 'Wind generation',   data: [], type: 'bar', backgroundColor: 'rgba(96,165,250,0.7)',  stack: 'gen' },
+      { label: 'Load (demand)',     data: [], type: 'line', borderColor: '#f1f5f9', backgroundColor: 'rgba(241,245,249,0.05)', borderWidth: 2.5, pointRadius: 0, fill: false, tension: 0.3 },
+      { label: 'Unmet (blackout)',  data: [], type: 'bar', backgroundColor: 'rgba(239,68,68,0.85)', stack: 'unmet' },
+      { label: 'Battery SOC (kWh)', data: [], type: 'line', borderColor: '#c084fc', borderWidth: 2, borderDash: [5,4], pointRadius: 0, fill: false, yAxisID: 'y1', tension: 0.3 },
+    ]
+  },
+  options: {
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: { stacked: true, grid: { color: '#1e293b' }, title: { display: true, text: 'Hour of day' } },
+      y: { stacked: false, grid: { color: '#293548' }, title: { display: true, text: 'Power (kW)' }, beginAtZero: true },
+      y1: { position: 'right', grid: { drawOnChartArea: false }, beginAtZero: true, title: { display: true, text: 'Battery (kWh)' } }
+    },
+    plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 10, font: { size: 10 } } } }
+  }
+});
+
+const annualCtx = document.getElementById('annualChart').getContext('2d');
+const annualChart = new Chart(annualCtx, {
+  type: 'bar',
+  data: {
+    labels: MONTHS,
+    datasets: [
+      { label: 'Demand', data: [], backgroundColor: '#475569' },
+      { label: 'Generation', data: [], backgroundColor: '#4ade80' },
+      { label: 'Unmet', data: [], backgroundColor: 'rgba(239,68,68,0.85)' }
+    ]
+  },
+  options: {
+    maintainAspectRatio: false,
+    scales: {
+      x: { grid: { display: false } },
+      y: { grid: { color: '#293548' }, title: { display: true, text: 'kWh' }, beginAtZero: true }
+    },
+    plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } }
+  }
+});
+
+/* ============================================================
+   STATE & UPDATE LOOP
+   ============================================================ */
+let stormActive = false;
+
+function bump(id, amt) {
+  const el = document.getElementById(id);
+  el.value = Math.max(+el.min, Math.min(+el.max, (+el.value) + amt));
+  update();
+}
+
+function toggleStorm() {
+  stormActive = !stormActive;
+  const btn = document.getElementById('btnStorm');
+  if (stormActive) {
+    btn.classList.add('active');
+    const cityKey = document.getElementById('citySelect').value;
+    btn.innerText = `⚠️ Storm active: ${CITIES[cityKey].storm.label}`;
+    document.getElementById('dayType').value = 'storm';
+    startStorm();
+  } else {
+    btn.classList.remove('active');
+    btn.innerText = '⛈️ Trigger 3-day storm';
+    document.getElementById('dayType').value = 'typical';
+    stopStorm();
+  }
+  update();
+}
+
+function pickDisplayMonth(cfg, override) {
+  if (override !== 'auto' && override !== undefined && override !== null) {
+    return parseInt(override);
+  }
+  // For storm: use first storm month for that city
+  if (cfg.stormActive) return cfg.city.storm.months[0];
+  // Default: a "tough" month so user sees if system is sized right
+  return cfg.city === CITIES.sanjose ? 11 : 0;
+}
+
+function update() {
+  const cityKey = document.getElementById('citySelect').value;
+  const city = CITIES[cityKey];
+  const houses = +document.getElementById('houses').value;
+  const solar = +document.getElementById('solar').value;
+  const wind = +document.getElementById('wind').value;
+  const battMax = +document.getElementById('battery').value;
+  const dayType = document.getElementById('dayType').value;
+  const opts = {
+    ev: document.getElementById('hasEV').checked,
+    heatPump: document.getElementById('hasHeatPump').checked,
+    hotTub: document.getElementById('hasHotTub').checked
+  };
+
+  // Update slider value displays
+  document.getElementById('housesVal').innerText = houses;
+  document.getElementById('solarVal').innerText = solar;
+  document.getElementById('windVal').innerText = wind;
+  document.getElementById('batteryVal').innerText = battMax;
+  document.getElementById('solarHint').innerText = `~${(solar/houses).toFixed(1)} kW per house`;
+  document.getElementById('windHint').innerText = `${Math.round(wind/10)} turbine${wind===10?'':'s'} (10 kW each)`;
+  document.getElementById('batteryHint').innerText = `~${(battMax/houses).toFixed(0)} kWh per house`;
+  document.getElementById('cityMeta').innerText = city.desc;
+
+  // Update storm button label if city changed while active
+  if (stormActive) {
+    document.getElementById('btnStorm').innerText = `⚠️ Storm active: ${city.storm.label}`;
+  }
+
+  const cfg = { city, houses, solar, wind, battMax, opts, stormActive,
+                month: 0 /* will be set below */ };
+
+  // Run yearlong sim
+  const raw = simulateYear(cfg);
+  const dispatched = dispatch(cfg, raw);
+
+  // Pick month to display
+  const monthOverride = document.getElementById('monthSel').value;
+  const displayMonth = pickDisplayMonth(cfg, monthOverride);
+  cfg.month = displayMonth;
+
+  // Build the day snapshot
+  const day = extractDay(raw, dispatched, cfg, displayMonth, dayType);
+
+  // Update chart title
+  const chartLabel =
+    dayType === 'storm' ? `Storm day · ${MONTHS[displayMonth]}` :
+    dayType === 'cloudy' ? `Cloudy day · ${MONTHS[displayMonth]}` :
+    `Typical ${MONTHS[displayMonth]} day · ${city.name}`;
+  document.getElementById('chartTitle').innerText = chartLabel;
+
+  // Update daily chart
+  dailyChart.data.datasets[0].data = day.solar;
+  dailyChart.data.datasets[1].data = day.wind;
+  dailyChart.data.datasets[2].data = day.load;
+  dailyChart.data.datasets[3].data = day.unmet;
+  dailyChart.data.datasets[4].data = day.soc;
+  dailyChart.options.scales.y1.max = battMax > 0 ? battMax : 100;
+  dailyChart.update('none');
+
+  // Aggregate metrics for the displayed day
+  const sum = arr => arr.reduce((a,b)=>a+b,0);
+  const dDemand = sum(day.load);
+  const dSolar = sum(day.solar);
+  const dWind = sum(day.wind);
+  const dUnmet = sum(day.unmet);
+  const dCurtail = sum(day.curtail);
+  // Battery cycled = abs net change in SOC from charging/discharging (approx via curtail+unmet)
+  // Simpler: total energy delivered minus instantaneous gen-load surplus served
+  // We'll compute as: load served from battery = served - min(load, gen_for_hour)
+  let dBattOut = 0;
+  for (let h = 0; h < 24; h++) {
+    const directGen = Math.min(day.load[h], day.solar[h] + day.wind[h]);
+    dBattOut += Math.max(0, day.served[h] - directGen);
+  }
+
+  const net = (dSolar + dWind + dBattOut) - dDemand;
+
+  // Update metrics
+  document.getElementById('mDemand').innerText  = `${Math.round(dDemand)} kWh`;
+  document.getElementById('mSolar').innerText   = `${Math.round(dSolar)} kWh`;
+  document.getElementById('mWind').innerText    = `${Math.round(dWind)} kWh`;
+  document.getElementById('mBatt').innerText    = `${Math.round(dBattOut)} kWh`;
+  document.getElementById('mCurtail').innerText = `${Math.round(dCurtail)} kWh`;
+  const mNet = document.getElementById('mNet');
+  const mNetWrap = document.getElementById('mNetWrap');
+  if (dUnmet > 0.5) {
+    mNet.innerText = `${Math.round(dUnmet)} kWh short`;
+    mNetWrap.classList.remove('surplus'); mNetWrap.classList.add('deficit');
+  } else {
+    mNet.innerText = `+${Math.round(dCurtail)} kWh excess`;
+    mNetWrap.classList.remove('deficit'); mNetWrap.classList.add('surplus');
+  }
+
+  // Annual roll-up
+  const annual = rollupAnnual(raw, dispatched, cfg);
+  annualChart.data.datasets[0].data = annual.map(m => Math.round(m.demand));
+  annualChart.data.datasets[1].data = annual.map(m => Math.round(m.gen));
+  annualChart.data.datasets[2].data = annual.map(m => Math.round(m.unmet));
+  annualChart.update('none');
+
+  // Annual summary
+  const totalUnmet = annual.reduce((a,m)=>a+m.unmet,0);
+  const totalDemand = annual.reduce((a,m)=>a+m.demand,0);
+  const totalBlackoutHrs = annual.reduce((a,m)=>a+m.blackoutHours,0);
+  const reliabilityPct = totalDemand > 0 ? (1 - totalUnmet/totalDemand) * 100 : 100;
+
+  let summaryHtml = '';
+  annual.forEach((m, i) => {
+    const cls = m.unmet > 1 ? 'deficit' : 'surplus';
+    const txt = m.unmet > 1
+      ? `${Math.round(m.unmet).toLocaleString()} kWh short`
+      : `+${Math.round(m.gen - m.demand).toLocaleString()} kWh`;
+    summaryHtml += `<div class="summary-item ${cls}"><span class="month">${MONTHS[i]}</span><span class="val">${txt}</span></div>`;
+  });
+  document.getElementById('annualSummary').innerHTML = summaryHtml;
+
+  // Warning panel
+  const warn = document.getElementById('warning');
+  warn.classList.remove('show', 'ok');
+  if (totalUnmet > totalDemand * 0.001) {
+    warn.classList.add('show');
+    warn.innerHTML = `⚠️ <strong>System undersized.</strong><br>
+      ${totalBlackoutHrs} blackout hours/year (${reliabilityPct.toFixed(2)}% reliable).<br>
+      ${Math.round(totalUnmet).toLocaleString()} kWh of demand goes unmet.`;
+  } else if (battMax === 0) {
+    warn.classList.add('show');
+    warn.innerHTML = `⚠️ <strong>No battery storage.</strong><br>Solar produces nothing at night, and wind isn't constant. Without batteries you'll lose power every evening.`;
+  } else {
+    warn.classList.add('ok');
+    warn.innerHTML = `✓ <strong>System holds up year-round.</strong><br>
+      ${reliabilityPct.toFixed(3)}% reliable across all 12 months.`;
+  }
+
+  // Costs — tier-based pricing
+  const tier = COST_TIERS[document.getElementById('costTier').value];
+  const cs = solar * tier.solar;
+  const cw = wind * tier.wind;
+  const cb = battMax * tier.batt;
+  const ct = cs + cw + cb;
+  document.getElementById('lcSolar').innerText = `☀️ Solar @ $${tier.solar.toLocaleString()}/kW`;
+  document.getElementById('lcWind').innerText  = `🌀 Wind @ $${tier.wind.toLocaleString()}/kW`;
+  document.getElementById('lcBatt').innerText  = `🔋 BESS @ $${tier.batt.toLocaleString()}/kWh`;
+  document.getElementById('cSolar').innerText = `$${cs.toLocaleString()}`;
+  document.getElementById('cWind').innerText  = `$${cw.toLocaleString()}`;
+  document.getElementById('cBatt').innerText  = `$${cb.toLocaleString()}`;
+  document.getElementById('cTotal').innerText = `$${ct.toLocaleString()}`;
+  document.getElementById('cPerHouse').innerText = `$${Math.round(ct/houses).toLocaleString()}`;
+
+  // Utility hookup comparison
+  const dist = +document.getElementById('dist').value;
+  document.getElementById('distVal').innerText = `${dist} mi`;
+  const utilLine = UTIL_LINE_PER_MILE * dist;
+  const utilSub = UTIL_SUBSTATION;
+  const utilService = UTIL_SERVICE_PER_HOME * houses;
+  const utilTotal = utilLine + utilSub + utilService;
+  const annualBills = UTIL_BILL_PER_HOUSE_MONTH * 12 * houses;
+
+  document.getElementById('utilBreakdown').innerHTML = `
+    <div class="util-row"><span class="lab">Power lines (${dist} mi @ $250k/mi)</span><span class="val">$${utilLine.toLocaleString()}</span></div>
+    <div class="util-row"><span class="lab">Distribution substation</span><span class="val">$${utilSub.toLocaleString()}</span></div>
+    <div class="util-row"><span class="lab">Service drops (${houses} × $5k)</span><span class="val">$${utilService.toLocaleString()}</span></div>
+    <div class="util-row total"><span class="lab">Utility hookup CapEx</span><span class="val">$${utilTotal.toLocaleString()}</span></div>
+    <div class="util-row" style="border-left-color:var(--dim)"><span class="lab">+ ongoing electric bills</span><span class="val" style="color:var(--dim)">~$${annualBills.toLocaleString()}/yr</span></div>
+  `;
+
+  // Verdict
+  const verdict = document.getElementById('verdict');
+  const headline = document.getElementById('verdictHeadline');
+  const detail = document.getElementById('verdictDetail');
+  verdict.classList.remove('win', 'lose');
+  const diff = utilTotal - ct;
+  if (diff > 0) {
+    verdict.classList.add('win');
+    headline.innerText = `✓ Microgrid wins by $${(diff/1000).toLocaleString(undefined,{maximumFractionDigits:0})}k`;
+    detail.innerHTML = `Building your own power costs <strong>$${ct.toLocaleString()}</strong>, but bringing utility lines ${dist} miles to ${houses} home${houses>1?'s':''} costs <strong>$${utilTotal.toLocaleString()}</strong>. Plus, no monthly electric bills — you save another <strong>~$${annualBills.toLocaleString()}/yr</strong>.`;
+  } else {
+    verdict.classList.add('lose');
+    headline.innerText = `✗ Utility wins by $${(Math.abs(diff)/1000).toLocaleString(undefined,{maximumFractionDigits:0})}k`;
+    const yearsToBreakEven = Math.abs(diff) / annualBills;
+    detail.innerHTML = `Utility hookup costs <strong>$${utilTotal.toLocaleString()}</strong> — cheaper than the microgrid's <strong>$${ct.toLocaleString()}</strong> upfront. But once you factor in ${yearsToBreakEven < 30 ? `<strong>~$${annualBills.toLocaleString()}/yr in electric bills</strong>, the microgrid breaks even in ${yearsToBreakEven.toFixed(1)} years` : 'electric bills, the microgrid still pays off long-term'}.`;
+  }
+
+  // Coaching tip
+  const tip = document.getElementById('tipText');
+  if (totalUnmet > totalDemand * 0.05) {
+    tip.innerHTML = `💡 <strong>Big shortfall.</strong> Try adding more solar, or more battery to carry the night and cloudy days.`;
+  } else if (totalUnmet > totalDemand * 0.001) {
+    tip.innerHTML = `💡 <strong>Almost there.</strong> A few hours/year still blackout. A bit more battery usually fixes it.`;
+  } else if (dCurtail > dDemand * 0.5) {
+    tip.innerHTML = `💡 <strong>Lots of wasted energy.</strong> You're generating much more than you use. You could downsize solar or add more battery to capture surplus.`;
+  } else if (cityKey === 'sanjose' && wind > solar * 0.5) {
+    tip.innerHTML = `💡 <strong>San Jose isn't windy.</strong> Wind only gets ~10% capacity factor here. Solar produces ~3x more energy per dollar.`;
+  } else if (cityKey === 'chicago' && solar > 200 && wind === 0) {
+    tip.innerHTML = `💡 <strong>Chicago has great wind.</strong> January gets only 1.7 kWh/m²/day of sun. Wind picks up the slack — try adding turbines.`;
+  } else {
+    tip.innerHTML = `💡 <strong>Solid sizing.</strong> You're balancing cost vs reliability well.`;
+  }
+
+  // Render scene
+  renderScene(cfg, day);
+}
+
+// Wire up
+document.querySelectorAll('input, select').forEach(i => i.addEventListener('input', update));
+
+// Defaults: 10 houses, 100 kW solar, 0 wind, 200 kWh battery
+update();
+</script>
+</body>
+</html>
